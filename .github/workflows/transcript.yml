@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VIDEO_URL: ${{ github.event.inputs.video_url || 'https://youtu.be/gTr3J33kQLA' }}
+      YT_COOKIES: ${{ secrets.YT_COOKIES }}
     steps:
       - uses: actions/checkout@v4
 
@@ -37,6 +38,20 @@ jobs:
           npm init -y >/dev/null 2>&1 || true
           npm install bgutils-js jsdom
 
+      - name: Extract via yt-dlp + cookies
+        id: cookies
+        if: env.YT_COOKIES != ''
+        continue-on-error: true
+        run: |
+          printf '%s' "$YT_COOKIES" > cookies.txt
+          mkdir -p transcripts
+          yt-dlp --cookies cookies.txt --js-runtimes node \
+            --skip-download --write-auto-subs --write-subs --sub-langs "en.*" \
+            --sub-format "json3/vtt/srv1" --convert-subs srt \
+            -o "transcripts/%(id)s.%(ext)s" "$VIDEO_URL"
+          rm -f cookies.txt
+          python scripts/srt_to_txt.py transcripts || true
+
       - name: Mint PO token
         id: mint
         continue-on-error: true
@@ -47,12 +62,13 @@ jobs:
 
       - name: Extract via InnerTube (PO token)
         id: po
+        if: steps.cookies.outcome != 'success'
         continue-on-error: true
         run: node scripts/po_transcript.mjs "$VIDEO_URL"
 
       - name: Extract via yt-dlp + PO token
         id: ytpo
-        if: steps.po.outcome != 'success'
+        if: steps.cookies.outcome != 'success' && steps.po.outcome != 'success'
         continue-on-error: true
         run: |
           if [ ! -s potoken.json ]; then echo "no token"; exit 1; fi
@@ -69,7 +85,7 @@ jobs:
           python scripts/srt_to_txt.py transcripts || true
 
       - name: Extract via yt-dlp / transcript-api (last resort)
-        if: steps.po.outcome != 'success' && steps.ytpo.outcome != 'success'
+        if: steps.cookies.outcome != 'success' && steps.po.outcome != 'success' && steps.ytpo.outcome != 'success'
         continue-on-error: true
         run: python scripts/extract_transcript.py "$VIDEO_URL"
 
