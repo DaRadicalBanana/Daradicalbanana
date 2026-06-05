@@ -37,13 +37,39 @@ jobs:
           npm init -y >/dev/null 2>&1 || true
           npm install bgutils-js jsdom
 
-      - name: Extract via PO token (InnerTube)
+      - name: Mint PO token
+        id: mint
+        continue-on-error: true
+        run: |
+          node scripts/mint_potoken.mjs > potoken.json
+          echo "---- potoken.json ----"
+          node -e "const t=require('./potoken.json'); console.log('vd len', t.visitorData.length, 'po len', t.poToken.length)"
+
+      - name: Extract via InnerTube (PO token)
         id: po
         continue-on-error: true
         run: node scripts/po_transcript.mjs "$VIDEO_URL"
 
-      - name: Extract via yt-dlp / transcript-api (fallback)
+      - name: Extract via yt-dlp + PO token
+        id: ytpo
         if: steps.po.outcome != 'success'
+        continue-on-error: true
+        run: |
+          if [ ! -s potoken.json ]; then echo "no token"; exit 1; fi
+          PO=$(node -e "process.stdout.write(require('./potoken.json').poToken)")
+          VD=$(node -e "process.stdout.write(require('./potoken.json').visitorData)")
+          mkdir -p transcripts
+          yt-dlp \
+            --js-runtimes node \
+            --extractor-args "youtube:player_client=web;visitor_data=$VD;po_token=web.player+$PO,web.gvs+$PO,web.subs+$PO" \
+            --skip-download --write-auto-subs --write-subs --sub-langs "en.*" \
+            --sub-format "json3/vtt/srv1" --convert-subs srt \
+            -o "transcripts/%(id)s.%(ext)s" "$VIDEO_URL"
+          # convert any srt to txt
+          python scripts/srt_to_txt.py transcripts || true
+
+      - name: Extract via yt-dlp / transcript-api (last resort)
+        if: steps.po.outcome != 'success' && steps.ytpo.outcome != 'success'
         continue-on-error: true
         run: python scripts/extract_transcript.py "$VIDEO_URL"
 
@@ -51,7 +77,7 @@ jobs:
         if: always()
         run: |
           echo "=================== TRANSCRIPT ==================="
-          cat transcripts/*.txt 2>/dev/null || echo "(no transcript produced)"
+          cat transcripts/*.txt 2>/dev/null | head -200 || echo "(no transcript produced)"
           echo "================================================="
 
       - name: Upload artifact
@@ -67,6 +93,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          rm -f potoken.json
           git add transcripts/ 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "nothing to commit"

@@ -54,8 +54,9 @@ async function mintPoToken(visitorData) {
 function ctx(visitorData) {
   return { client: { clientName: 'WEB', clientVersion: CV, hl: 'en', gl: 'US', visitorData } };
 }
-async function inn(method, body, visitorData) {
-  const r = await fetch(`${HOST}/youtubei/v1/${method}?prettyPrint=false&key=${KEY}`, {
+async function inn(method, body, visitorData, useKey = true) {
+  const url = `${HOST}/youtubei/v1/${method}?prettyPrint=false` + (useKey ? `&key=${KEY}` : '');
+  const r = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json', 'User-Agent': UA, 'Origin': HOST,
@@ -63,7 +64,9 @@ async function inn(method, body, visitorData) {
     },
     body: JSON.stringify(body),
   });
-  return { status: r.status, json: await r.json().catch(() => null) };
+  const text = await r.text();
+  let json = null; try { json = JSON.parse(text); } catch {}
+  return { status: r.status, json, text };
 }
 
 function findTranscriptToken(o) {
@@ -91,17 +94,22 @@ function segText(s) {
 // --- Method A: InnerTube get_transcript (www.youtube.com) -------------------
 async function tryGetTranscript(visitorData, poToken) {
   const nx = await inn('next', { context: ctx(visitorData), videoId: VID }, visitorData);
-  if (nx.status !== 200) { console.log(`[A] next status ${nx.status}`); return false; }
+  if (nx.status !== 200) { console.log(`[A] next status ${nx.status} :: ${(nx.text || '').slice(0, 120)}`); return false; }
   const tok = findTranscriptToken(nx.json)[0];
   if (!tok) { console.log('[A] no transcript token in next'); return false; }
-  for (const withPo of [true, false]) {
+  console.log('[A] next ok, got transcript token');
+  const variants = [
+    { useKey: true, po: true }, { useKey: true, po: false },
+    { useKey: false, po: true }, { useKey: false, po: false },
+  ];
+  for (const v of variants) {
     const body = { context: ctx(visitorData), params: tok };
-    if (withPo) body.serviceIntegrityDimensions = { poToken };
-    const gt = await inn('get_transcript', body, visitorData);
+    if (v.po) body.serviceIntegrityDimensions = { poToken };
+    const gt = await inn('get_transcript', body, visitorData, v.useKey);
     const segs = collectSegments(gt.json);
-    console.log(`[A] get_transcript po=${withPo} status=${gt.status} segs=${segs.length}`);
+    console.log(`[A] get_transcript key=${v.useKey} po=${v.po} status=${gt.status} segs=${segs.length} :: ${(gt.text || '').replace(/\s+/g, ' ').slice(0, 100)}`);
     if (segs.length) {
-      const lines = segs.map((s) => `[${tsfmt((parseInt(s.startMs || '0', 10)) / 1000)}] ${segText(s).trim()}`).filter((l) => l.replace(/\[\d+:\d+\]\s*/, ''));
+      const lines = segs.map((s) => `[${tsfmt((parseInt(s.startMs || '0', 10)) / 1000)}] ${segText(s).trim()}`).filter((l) => l.replace(/\[\d+:\d+\]\s*/, '').trim());
       writeOut(lines);
       return true;
     }
@@ -110,27 +118,38 @@ async function tryGetTranscript(visitorData, poToken) {
 }
 
 // --- Method B: player captionTracks -> timedtext (json3) --------------------
+const PLAYER_CLIENTS = {
+  WEB: { clientName: 'WEB', clientVersion: CV },
+  MWEB: { clientName: 'MWEB', clientVersion: CV },
+  TVEMBED: { clientName: 'TVHTML5_SIMPLY_EMBEDDED_PLAYER', clientVersion: '2.0' },
+  ANDROID_VR: { clientName: 'ANDROID_VR', clientVersion: '1.60.19', androidSdkVersion: 32 },
+};
+
 async function tryTimedText(visitorData, poToken) {
-  const pl = await inn('player', {
-    context: ctx(visitorData), videoId: VID, contentCheckOk: true, racyCheckOk: true,
-    serviceIntegrityDimensions: { poToken },
-  }, visitorData);
-  const tracks = pl.json?.captions?.playerCaptionsTracklistRenderer?.captionTracks || [];
-  console.log(`[B] player status=${pl.json?.playabilityStatus?.status} tracks=${tracks.length}`);
-  if (!tracks.length) return false;
-  const pick = tracks.find((t) => (t.languageCode || '').startsWith('en')) || tracks[0];
-  let url = pick.baseUrl;
-  url += (url.includes('?') ? '&' : '?') + 'fmt=json3';
-  const r = await fetch(url, { headers: { 'User-Agent': UA } });
-  const j = await r.json().catch(() => null);
-  const events = j?.events || [];
-  const lines = [];
-  for (const e of events) {
-    if (!e.segs) continue;
-    const text = e.segs.map((s) => s.utf8 || '').join('').replace(/\n/g, ' ').trim();
-    if (text) lines.push(`[${tsfmt((e.tStartMs || 0) / 1000)}] ${text}`);
+  for (const [name, client] of Object.entries(PLAYER_CLIENTS)) {
+    const context = { client: { ...client, hl: 'en', gl: 'US', visitorData } };
+    if (name === 'TVEMBED') context.thirdParty = { embedUrl: HOST + '/' };
+    const pl = await inn('player', {
+      context, videoId: VID, contentCheckOk: true, racyCheckOk: true,
+      serviceIntegrityDimensions: { poToken },
+    }, visitorData);
+    const tracks = pl.json?.captions?.playerCaptionsTracklistRenderer?.captionTracks || [];
+    console.log(`[B] ${name} status=${pl.json?.playabilityStatus?.status} tracks=${tracks.length}`);
+    if (!tracks.length) continue;
+    const pick = tracks.find((t) => (t.languageCode || '').startsWith('en')) || tracks[0];
+    let url = pick.baseUrl;
+    url += (url.includes('?') ? '&' : '?') + 'fmt=json3&potc=1&pot=' + encodeURIComponent(poToken);
+    const r = await fetch(url, { headers: { 'User-Agent': UA } });
+    const j = await r.json().catch(() => null);
+    const events = j?.events || [];
+    const lines = [];
+    for (const e of events) {
+      if (!e.segs) continue;
+      const text = e.segs.map((s) => s.utf8 || '').join('').replace(/\n/g, ' ').trim();
+      if (text) lines.push(`[${tsfmt((e.tStartMs || 0) / 1000)}] ${text}`);
+    }
+    if (lines.length) { writeOut(lines); return true; }
   }
-  if (lines.length) { writeOut(lines); return true; }
   return false;
 }
 
