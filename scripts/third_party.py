@@ -94,19 +94,10 @@ INVIDIOUS_INSTANCES = [
 
 
 def via_invidious(vid):
-    instances = list(INVIDIOUS_INSTANCES)
-    try:
-        data = json.loads(_req("https://api.invidious.io/instances.json?sort_by=health", timeout=20))
-        for name, info in data:
-            if info.get("type") == "https" and info.get("api") is not False:
-                u = "https://" + name
-                if u not in instances:
-                    instances.append(u)
-    except Exception:
-        pass
+    instances = list(INVIDIOUS_INSTANCES)[:8]
     for inst in instances:
         try:
-            lst = json.loads(_req(f"{inst}/api/v1/captions/{vid}", timeout=20))
+            lst = json.loads(_req(f"{inst}/api/v1/captions/{vid}", timeout=8))
             caps = lst.get("captions") or []
             if not caps:
                 continue
