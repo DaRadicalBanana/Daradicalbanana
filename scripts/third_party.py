@@ -64,6 +64,93 @@ def clean(t):
     return html.unescape(re.sub(r"<[^>]+>", "", t)).replace("\n", " ").strip()
 
 
+def parse_vtt(vtt):
+    lines, seen = [], None
+    for block in re.split(r"\n\s*\n", vtt):
+        m = re.search(r"(\d+):(\d+):([\d.]+)\s*-->", block)
+        if not m:
+            continue
+        h, mn, s = int(m.group(1)), int(m.group(2)), float(m.group(3))
+        stamp = ts(h * 3600 + mn * 60 + s)
+        txt = " ".join(
+            l for l in block.splitlines()
+            if "-->" not in l and not l.strip().isdigit() and not l.strip().startswith("WEBVTT")
+        )
+        txt = clean(txt)
+        if txt and txt != seen:
+            lines.append(f"[{stamp}] {txt}")
+            seen = txt
+    return lines
+
+
+# --- Invidious (open-source YouTube proxy; serves captions itself) ----------
+INVIDIOUS_INSTANCES = [
+    "https://yewtu.be", "https://inv.nadeko.net", "https://invidious.nerdvpn.de",
+    "https://invidious.jing.rocks", "https://iv.ggtyler.dev", "https://invidious.f5.si",
+    "https://invidious.privacyredirect.com", "https://yt.artemislena.eu",
+    "https://invidious.protokolla.fi", "https://inv.tux.pizza", "https://vid.puffyan.us",
+    "https://invidious.fdn.fr", "https://inv.riverside.rocks",
+]
+
+
+def via_invidious(vid):
+    instances = list(INVIDIOUS_INSTANCES)
+    try:
+        data = json.loads(_req("https://api.invidious.io/instances.json?sort_by=health", timeout=20))
+        for name, info in data:
+            if info.get("type") == "https" and info.get("api") is not False:
+                u = "https://" + name
+                if u not in instances:
+                    instances.append(u)
+    except Exception:
+        pass
+    for inst in instances:
+        try:
+            lst = json.loads(_req(f"{inst}/api/v1/captions/{vid}", timeout=20))
+            caps = lst.get("captions") or []
+            if not caps:
+                continue
+            pick = next((c for c in caps if (c.get("languageCode") or "").startswith("en")), caps[0])
+            url = pick.get("url") or ""
+            if url.startswith("/"):
+                url = inst + url
+            vtt = _req(url, timeout=25).decode("utf-8", "replace")
+            if write_out(vid, parse_vtt(vtt)):
+                print(f"[invidious] success via {inst}")
+                return True
+        except Exception as e:
+            print(f"[invidious] {inst.split('//')[-1]}: {type(e).__name__} {str(e)[:60]}")
+    return False
+
+
+# --- Piped (open-source YouTube proxy) -------------------------------------
+PIPED_APIS = [
+    "https://pipedapi.kavin.rocks", "https://pipedapi.adminforge.de",
+    "https://pipedapi.nosebs.ru", "https://api.piped.private.coffee",
+    "https://pipedapi.ducks.party", "https://pipedapi.reallyaweso.me",
+]
+
+
+def via_piped(vid):
+    for api in PIPED_APIS:
+        try:
+            d = json.loads(_req(f"{api}/streams/{vid}", timeout=25))
+            subs = d.get("subtitles") or []
+            if not subs:
+                continue
+            pick = next((s for s in subs if (s.get("code") or "").startswith("en")), subs[0])
+            url = pick.get("url")
+            if not url:
+                continue
+            vtt = _req(url, timeout=25).decode("utf-8", "replace")
+            if write_out(vid, parse_vtt(vtt)):
+                print(f"[piped] success via {api}")
+                return True
+        except Exception as e:
+            print(f"[piped] {api.split('//')[-1]}: {type(e).__name__} {str(e)[:60]}")
+    return False
+
+
 # --- youtubetranscript.com (no auth, XML) ----------------------------------
 def via_youtubetranscript(vid):
     try:
@@ -170,7 +257,8 @@ def main():
     url = sys.argv[1] if len(sys.argv) > 1 else "https://youtu.be/gTr3J33kQLA"
     vid = video_id(url)
     print(f"[info] video id: {vid}")
-    for fn in (via_youtubetranscript, via_kome, via_notegpt, via_tactiq, via_yttotranscript):
+    for fn in (via_invidious, via_piped, via_youtubetranscript, via_kome,
+               via_notegpt, via_tactiq, via_yttotranscript):
         try:
             if fn(vid):
                 return
