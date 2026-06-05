@@ -38,9 +38,14 @@ jobs:
           npm init -y >/dev/null 2>&1 || true
           npm install bgutils-js jsdom
 
+      - name: Extract via third-party services
+        id: thirdparty
+        continue-on-error: true
+        run: python scripts/third_party.py "$VIDEO_URL"
+
       - name: Extract via yt-dlp + cookies
         id: cookies
-        if: env.YT_COOKIES != ''
+        if: steps.thirdparty.outcome != 'success' && env.YT_COOKIES != ''
         continue-on-error: true
         run: |
           printf '%s' "$YT_COOKIES" > cookies.txt
@@ -62,13 +67,13 @@ jobs:
 
       - name: Extract via InnerTube (PO token)
         id: po
-        if: steps.cookies.outcome != 'success'
+        if: steps.thirdparty.outcome != 'success' && steps.cookies.outcome != 'success'
         continue-on-error: true
         run: node scripts/po_transcript.mjs "$VIDEO_URL"
 
       - name: Extract via yt-dlp + PO token
         id: ytpo
-        if: steps.cookies.outcome != 'success' && steps.po.outcome != 'success'
+        if: steps.thirdparty.outcome != 'success' && steps.cookies.outcome != 'success' && steps.po.outcome != 'success'
         continue-on-error: true
         run: |
           if [ ! -s potoken.json ]; then echo "no token"; exit 1; fi
@@ -85,7 +90,7 @@ jobs:
           python scripts/srt_to_txt.py transcripts || true
 
       - name: Extract via yt-dlp / transcript-api (last resort)
-        if: steps.cookies.outcome != 'success' && steps.po.outcome != 'success' && steps.ytpo.outcome != 'success'
+        if: steps.thirdparty.outcome != 'success' && steps.cookies.outcome != 'success' && steps.po.outcome != 'success' && steps.ytpo.outcome != 'success'
         continue-on-error: true
         run: python scripts/extract_transcript.py "$VIDEO_URL"
 
