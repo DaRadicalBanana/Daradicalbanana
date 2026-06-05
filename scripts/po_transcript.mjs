@@ -14,8 +14,10 @@ const VID = parseId(ARG);
 const CV = '2.20240826.01.00';
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36';
 const HOST = 'https://www.youtube.com';
-const KEY = 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8';
 const OUT = 'transcripts';
+// YouTube's public web InnerTube key is optional for these calls; allow an
+// override via env but default to keyless so no key literal lives in source.
+const KEY = process.env.YT_INNERTUBE_KEY || '';
 
 function parseId(u) {
   const m = u.match(/(?:v=|youtu\.be\/|shorts\/|embed\/)([0-9A-Za-z_-]{11})/);
@@ -55,7 +57,8 @@ function ctx(visitorData) {
   return { client: { clientName: 'WEB', clientVersion: CV, hl: 'en', gl: 'US', visitorData } };
 }
 async function inn(method, body, visitorData, useKey = true) {
-  const url = `${HOST}/youtubei/v1/${method}?prettyPrint=false` + (useKey ? `&key=${KEY}` : '');
+  const keyPart = useKey && KEY ? `&key=${KEY}` : '';
+  const url = `${HOST}/youtubei/v1/${method}?prettyPrint=false${keyPart}`;
   const r = await fetch(url, {
     method: 'POST',
     headers: {
