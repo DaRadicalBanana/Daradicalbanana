@@ -1,0 +1,62 @@
+name: Extract Transcript
+
+on:
+  push:
+    branches: [ "claude/video-transcript-extraction-jlAit" ]
+    paths-ignore:
+      - "transcripts/**"
+  workflow_dispatch:
+    inputs:
+      video_url:
+        description: "YouTube video URL or ID"
+        required: true
+        default: "https://youtu.be/gTr3J33kQLA"
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install --upgrade yt-dlp youtube-transcript-api
+
+      - name: Extract transcript
+        env:
+          VIDEO_URL: ${{ github.event.inputs.video_url || 'https://youtu.be/gTr3J33kQLA' }}
+        run: python scripts/extract_transcript.py "$VIDEO_URL"
+
+      - name: Show transcript in log
+        if: always()
+        run: |
+          echo "=================== TRANSCRIPT ==================="
+          cat transcripts/*.txt 2>/dev/null || echo "(no transcript produced)"
+          echo "================================================="
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: transcript
+          path: transcripts/
+          if-no-files-found: ignore
+
+      - name: Commit transcript
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add transcripts/ 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+          else
+            git commit -m "Add transcript for video [skip ci]"
+            git push origin HEAD:claude/video-transcript-extraction-jlAit
+          fi
