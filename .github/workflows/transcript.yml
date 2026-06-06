@@ -41,6 +41,7 @@ jobs:
       - name: Extract via third-party services
         id: thirdparty
         continue-on-error: true
+        timeout-minutes: 3
         env:
           SUPADATA_API_KEY: ${{ secrets.SUPADATA_API_KEY }}
         run: python scripts/third_party.py "$VIDEO_URL"
@@ -49,6 +50,7 @@ jobs:
         id: proxy
         if: steps.thirdparty.outcome != 'success'
         continue-on-error: true
+        timeout-minutes: 8
         run: python scripts/proxy_extract.py "$VIDEO_URL"
 
       - name: Extract via yt-dlp + cookies
