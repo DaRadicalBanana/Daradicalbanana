@@ -83,6 +83,46 @@ def parse_vtt(vtt):
     return lines
 
 
+# --- Supadata (managed API on residential infra; free tier 100/mo) ----------
+def via_supadata(vid):
+    key = os.environ.get("SUPADATA_API_KEY")
+    if not key:
+        print("[supadata] no SUPADATA_API_KEY set, skipping")
+        return False
+    base = "https://api.supadata.ai/v1/transcript"
+    try:
+        raw = _req(f"{base}?url=https://youtu.be/{vid}&lang=en",
+                   headers={"x-api-key": key}, timeout=60)
+        d = json.loads(raw)
+        # Long videos may return {"jobId": ...}; poll for the result.
+        if d.get("jobId") and not d.get("content"):
+            for _ in range(20):
+                time.sleep(3)
+                jd = json.loads(_req(f"{base}/{d['jobId']}", headers={"x-api-key": key}, timeout=30))
+                if jd.get("status") in ("completed", "success") or jd.get("content"):
+                    d = jd
+                    break
+                if jd.get("status") in ("failed", "error"):
+                    print(f"[supadata] job failed: {jd}")
+                    return False
+        content = d.get("content")
+        if isinstance(content, list):
+            lines = [f"[{ts(c.get('offset', 0) / 1000)}] {clean(c.get('text', ''))}" for c in content]
+        elif isinstance(content, str):
+            lines = [l.strip() for l in content.splitlines() if l.strip()]
+        else:
+            lines = []
+        if write_out(vid, lines):
+            print("[supadata] success")
+            return True
+        print(f"[supadata] no content (resp keys: {list(d.keys())})")
+    except urllib.error.HTTPError as e:
+        print(f"[supadata] HTTP {e.code}: {e.read()[:200]!r}")
+    except Exception as e:
+        print(f"[supadata] fail: {type(e).__name__}: {str(e)[:200]}")
+    return False
+
+
 # --- Invidious (open-source YouTube proxy; serves captions itself) ----------
 INVIDIOUS_INSTANCES = [
     "https://yewtu.be", "https://inv.nadeko.net", "https://invidious.nerdvpn.de",
@@ -248,8 +288,8 @@ def main():
     url = sys.argv[1] if len(sys.argv) > 1 else "https://youtu.be/gTr3J33kQLA"
     vid = video_id(url)
     print(f"[info] video id: {vid}")
-    for fn in (via_invidious, via_piped, via_youtubetranscript, via_kome,
-               via_notegpt, via_tactiq, via_yttotranscript):
+    for fn in (via_supadata, via_invidious, via_piped, via_youtubetranscript,
+               via_kome, via_notegpt, via_tactiq, via_yttotranscript):
         try:
             if fn(vid):
                 return
