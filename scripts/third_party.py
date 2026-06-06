@@ -16,7 +16,7 @@ import urllib.request
 import urllib.error
 
 # Hard-bound every socket operation so no single provider can hang the job.
-socket.setdefaulttimeout(8)
+socket.setdefaulttimeout(15)
 
 OUT = "transcripts"
 BROWSER = {
@@ -295,7 +295,7 @@ def main():
     start = time.time()
     for fn in (via_supadata, via_invidious, via_piped, via_youtubetranscript,
                via_kome, via_notegpt, via_tactiq, via_yttotranscript):
-        if time.time() - start > 150:
+        if time.time() - start > 360:
             print("[info] third-party overall deadline reached")
             break
         try:

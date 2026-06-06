@@ -45,7 +45,7 @@ jobs:
       - name: Extract via third-party services
         id: thirdparty
         continue-on-error: true
-        timeout-minutes: 3
+        timeout-minutes: 8
         env:
           SUPADATA_API_KEY: ${{ secrets.SUPADATA_API_KEY }}
         run: python scripts/third_party.py "$VIDEO_URL"
