@@ -15,6 +15,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: transcript-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   extract:
     runs-on: ubuntu-latest
@@ -125,12 +129,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           rm -f potoken.json
+          BRANCH=claude/video-transcript-extraction-jlAit
           git add transcripts/ 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "nothing to commit"
           else
             git commit -m "Add transcript for ${VIDEO_URL} [skip ci]"
-            git push origin HEAD:claude/video-transcript-extraction-jlAit
+            for i in 1 2 3 4 5 6; do
+              git fetch origin "$BRANCH" || true
+              git rebase "origin/$BRANCH" -X ours || git rebase --abort || true
+              if git push origin "HEAD:$BRANCH"; then echo "pushed"; break; fi
+              sleep $((RANDOM % 5 + 2))
+            done
           fi
 
       - name: Fail if no transcript
