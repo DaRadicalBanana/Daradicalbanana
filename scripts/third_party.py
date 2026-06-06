@@ -11,8 +11,12 @@ import sys
 import json
 import time
 import html
+import socket
 import urllib.request
 import urllib.error
+
+# Hard-bound every socket operation so no single provider can hang the job.
+socket.setdefaulttimeout(8)
 
 OUT = "transcripts"
 BROWSER = {
@@ -288,8 +292,12 @@ def main():
     url = sys.argv[1] if len(sys.argv) > 1 else "https://youtu.be/gTr3J33kQLA"
     vid = video_id(url)
     print(f"[info] video id: {vid}")
+    start = time.time()
     for fn in (via_supadata, via_invidious, via_piped, via_youtubetranscript,
                via_kome, via_notegpt, via_tactiq, via_yttotranscript):
+        if time.time() - start > 150:
+            print("[info] third-party overall deadline reached")
+            break
         try:
             if fn(vid):
                 return
