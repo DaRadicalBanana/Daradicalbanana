@@ -1,0 +1,1580 @@
+[00:09] All right.
+[00:11] Hi everyone. So, welcome to building
+[00:14] agents uh with Opus 4.8. Uh my name is
+[00:18] Omid Marani. I'm a member of Anthropics
+[00:20] technical staff and today we have a
+[00:23] really packed session uh including live
+[00:25] demos from two teams who've been
+[00:27] building on Opus 4.8 already. So, let's
+[00:30] go ahead and jump right in.
+[00:35] So, some quick housekeeping before we
+[00:37] get started. So, the session um is going
+[00:40] to be recorded for everybody. Uh please
+[00:42] feel free to submit any questions um at
+[00:44] any time using the Q&A tab in the
+[00:47] webinar portal and we'll be sharing a
+[00:49] survey uh near the end of the webinar.
+[00:51] So, please feel free to give us
+[00:53] feedback. Um it genuinely will help
+[00:55] shape uh what we cover next time.
+[01:03] So uh joining me today are Shrey Panda
+[01:06] uh he's a growth engineer at
+[01:07] Browserbase. Uh we also have Charles
+[01:10] Packer the CEO and co-founder of Leta.
+[01:14] Browserbase runs headless browser
+[01:16] infrastructure for AI agents so your
+[01:18] agents can reliably browse the web at
+[01:21] scale. And let is a platform for
+[01:23] building stateful agents with long-term
+[01:26] memory. Both of the teams have been
+[01:28] building on Opus 4.8 and you'll see live
+[01:30] demos from each of them later in the
+[01:32] session.
+[01:37] So to start I'll introduce Opus 4.8
+[01:40] what's new and improved and then I'll
+[01:42] cover migrating to using it the
+[01:45] practical things to know that you're uh
+[01:47] coming from Opus 4.7 and after that
+[01:50] we'll hand uh the screen to Charles who
+[01:52] will demo what led us building on Opus
+[01:54] 4.8
+[01:55] and then Shre will do the same for
+[01:57] browser base. We'll also do uh some Q&A
+[02:00] towards the end. So, please feel free to
+[02:02] share questions as we go.
+[02:09] So, let's start by going over the uh
+[02:12] current claude lineup. So, we have three
+[02:15] model classes. Opus, our frontier model
+[02:18] and also the most capable model. uh
+[02:20] sonnet which is our workhorse that
+[02:22] brings uh near frontier intelligence to
+[02:25] scale and haiku which is our most
+[02:27] efficient model that's built for cost
+[02:29] and speed. Opus 4.8 um is our most
+[02:32] capable model for coding enterprise
+[02:34] agents professional work and you should
+[02:37] really try to reach for this on the
+[02:38] hardest and most complex problems um
+[02:41] anything that needs peak level
+[02:42] intelligence and sustained autonomy. So
+[02:45] this includes things like long horizon
+[02:47] agentic tasks uh deep and complex coding
+[02:51] uh precisionbased enterprise workflows
+[02:53] like uh finance and legal uh and
+[02:56] computer use automation and then this is
+[02:58] also included with a with a 1 million
+[03:00] token context window.
+[03:03] Uh SA 4.6 approaches opus level
+[03:06] intelligence. Um it makes it ideal for
+[03:08] scaled high quality task completion. So
+[03:10] think of high volume production
+[03:12] deployments, agentic workflows and tool
+[03:15] use, um fast iteration and prototyping,
+[03:18] uh and a lot of uh costsensitive uh
+[03:21] workloads that will still need strong
+[03:22] intelligence.
+[03:25] And Haiku 4.5 uh delivers uh near
+[03:28] frontier performance at also the most
+[03:30] accessible cost and speed.
+[03:36] So what has actually improved since opus
+[03:39] 4.7? So firstly we have a long horizon
+[03:43] autonomy. Opus 4.8 works independently
+[03:46] for much longer than any prior model. It
+[03:48] plans across stages. It tracks
+[03:51] dependencies and it even unblocks itself
+[03:53] when it gets stuck. So um it also comes
+[03:56] with better judgment and instruction
+[03:58] following. it catches its own mistakes
+[04:01] uh stays in scope and produces outputs
+[04:04] um that you can really ship uh without
+[04:06] having to recheck. And then thirdly, uh
+[04:08] it's state-of-the-art on Agentic
+[04:10] benchmarks, uh 69.2% on Sweetbench Pro,
+[04:14] 83.4% on OS World Verified, and 57.9% on
+[04:19] humanity's last exam with tools.
+[04:25] So, let's walk through uh some new
+[04:27] capabilities. Um so starting with
+[04:30] dynamic workflows. So this is um a
+[04:32] research preview in cloud code that lets
+[04:35] open 4.8 take on tasks too big for one
+[04:38] pass. So it plans the work. Uh it fans
+[04:41] out across parallel sub aents and
+[04:44] verifies results uh before returning. So
+[04:47] two things that make this really
+[04:48] powerful. Uh the first is scale. It runs
+[04:52] tens to hundreds of parallel sub aents
+[04:54] in a single session. And then the second
+[04:56] is verification. So there are built-in
+[04:59] steps to verify any kind of output like
+[05:02] adversarial review. So this is where
+[05:04] separate agents try to refute each
+[05:06] finding um so only real issues survive
+[05:09] towards the end.
+[05:14] Uh next up we have fast mode. So this is
+[05:17] um a high-speed option for Opus 4.8.
+[05:21] you can get two and a half times faster
+[05:23] output tokens uh per second uh with the
+[05:26] same model uh and the same behavior as
+[05:28] standard OPUS 4.8. Uh this is priced at
+[05:31] $10 per million input tokens and $50 per
+[05:34] million output. So in practice, this
+[05:36] means a couple things. For latency
+[05:39] sensitive agent workflows, um you get
+[05:41] two and a half times faster output
+[05:43] without any kind of quality trade-off.
+[05:46] And if you've used fast mode on Opus
+[05:48] 4.7, this is three times cheaper. uh
+[05:50] than before.
+[05:56] Um so here's another capability I'm
+[05:58] really excited about. Uh mid
+[05:59] conversation system messages. So you can
+[06:02] now append a system ro message partway
+[06:05] through a conversation to update
+[06:07] instructions mid task. And this doesn't
+[06:10] invalidate your your prompt caching. So
+[06:13] in practice you can update policies,
+[06:15] permissions,
+[06:17] context uh midsession and every cache
+[06:20] turn uh above it will stay intact. Um
+[06:23] and the new message will carry the same
+[06:25] kind of authority uh at the top level uh
+[06:28] uh system field.
+[06:34] All right. So this is the overview of
+[06:36] what's new. Uh and now we're going to
+[06:38] discuss what's really important when
+[06:40] trying to migrate to Opus 4.8. if you're
+[06:43] currently on 4.7.
+[06:48] So, first effort defaults have changed a
+[06:51] bit. Um, Opus 4.8 defaults to high
+[06:54] effort uh everywhere. And it adds a new
+[06:57] top tier called max. So, uh the full
+[07:00] menu is now going to be low, medium,
+[07:02] high, extra high, and max. Um, and the
+[07:06] important part uh is that the the cost
+[07:08] and quality curve has shifted uh
+[07:10] downward. So uh please try testing you
+[07:13] know one effort level lower than you
+[07:15] might think that you would have needed
+[07:16] on Opus 4.7 or prior.
+[07:19] Uh secondly, Opus 4.8 uh narrates its
+[07:22] own progress. So it reports progress
+[07:25] between tool calls and writes uh fuller
+[07:27] wrap-ups on its own. So you can drop any
+[07:30] kind of prompts that you might have had
+[07:31] before with Opus that would have it
+[07:34] summarize each call. Um, and if you
+[07:36] prefer like a quieter model uh similar
+[07:38] to like 4.7, you can uh just have a
+[07:41] simple prompt on 4.8 uh asking to be
+[07:43] more silent.
+[07:46] And then thirdly, for cloud code users,
+[07:48] uh there's ultra code. So this is uh the
+[07:51] new top of the effort menu uh where
+[07:53] extra high effort plus dynamic multi-
+[07:56] aent workflows for some of the hardest
+[07:57] latency insensitive tasks like we were
+[08:00] discussing before.
+[08:06] Okay, so now it's going to be time for
+[08:08] the fun part, uh, live demos. So, first
+[08:11] up is Charles Packer, uh, the CEO and
+[08:14] co-founder of Leta. Charles, I'll let
+[08:16] you take it away.
+[08:19] >> All right.
+[08:24] All right. Well, yeah, it's a pleasure
+[08:26] to be here. Um, I think as a team, Opus
+[08:29] 4.8 is pretty exciting I think
+[08:31] especially um you know some of the
+[08:33] features that Amid was talking about
+[08:35] with kind of mid-flight system prompt
+[08:36] editing and before I got to demo I
+[08:39] actually did want to talk a little bit
+[08:41] more about you know why as a company we
+[08:43] even care about memory in the first
+[08:45] place um so leta we're an AI research
+[08:47] lab we're of hyperfocused on the memory
+[08:49] problem um from a very like model
+[08:51] agnostic angle so we're trying to build
+[08:53] a future where machines can remember
+[08:54] everything learn continuously and
+[08:56] improve themselves over time uh and I I
+[08:59] think for the developers in the room or
+[09:01] on the call,
+[09:04] we also write software. So we have an
+[09:06] open source project called Leticode.
+[09:08] It's a stateful or um you could also
+[09:10] call it a memory first agent harness.
+[09:12] It's fully open source, Apache 2.0. Um
+[09:15] it's model agnostic. It's prito optimal.
+[09:17] So we spend a lot of time as researchers
+[09:19] making sure that we do things like tool
+[09:20] set swapping, system prompt swapping. Um
+[09:23] so that you can kind of swap between
+[09:25] like enthropic and openi models and
+[09:26] still have crito optimal performance.
+[09:28] Um, there's a 2E which I'll actually I
+[09:31] won't be showing the two today. I'll be
+[09:32] showing the desktop app because I think
+[09:33] it's a little bit more interesting to
+[09:34] look at. Um, but there's a 2E. There's a
+[09:36] full SDK websocket app server kind of
+[09:38] similar to like the codeex app server if
+[09:40] you're familiar with that. And yeah,
+[09:42] there's full integrations for things
+[09:43] like Slack and Telegram. If you are a
+[09:45] developer on this webinar and you're
+[09:47] looking to kind of like build, you know,
+[09:48] either for yourself or for your
+[09:50] customers, like digital people that are
+[09:52] fully stful, have long-term memory, um
+[09:54] yeah, you just hop over to the docs um
+[09:56] or our main website and kind of check
+[09:58] take a look at the code.
+[10:00] And yeah, I think you know again why
+[10:02] Opus 4.8 is like really exciting for us
+[10:04] is because we are as a company a
+[10:06] research lab that's focused on memory.
+[10:08] And I think um you know, historically
+[10:11] we've done a lot of stuff in the space.
+[10:12] MEGPT is one of them. Heartbeats is
+[10:14] another, which I think if you played
+[10:16] around with Open Claw, I think that's
+[10:17] kind of the reason OpenClaw blew blew up
+[10:19] in my opinion. It's because we kind of
+[10:22] went from having these agents that are
+[10:23] purely passive where you have to like
+[10:25] feed inputs into them to agents that can
+[10:27] run on like timers or heartbeats. Um,
+[10:29] sleeptime compute, I know, um, Anthropic
+[10:31] is a really cool dreaming feature in the
+[10:34] cloud managed agents platform. Um, so
+[10:36] this is some, you know, very related to
+[10:38] research we did, uh, I think in the
+[10:40] middle of last year. Uh memory is file
+[10:42] system is another thing we've been
+[10:43] really hype on for a while now. We had
+[10:46] this blog post a year ago that was kind
+[10:47] of benchmarking memory and showing that
+[10:49] file systems are a very good
+[10:50] representation for memory and I think
+[10:52] now in 2026 it's kind of taken off and
+[10:54] context repositories which is something
+[10:56] um I'll be talking about more here kind
+[10:58] of both in the demo and then also in the
+[11:00] context of like if you are using context
+[11:02] repositories what does opus 4.8 might
+[11:04] get you that Opus 4.7 doesn't.
+[11:08] And I think you know to to trace the
+[11:10] history of memory over time even for us
+[11:12] as a company uh I think you know 2023
+[11:14] when we were working on megpt back when
+[11:16] I was in grad school this is all about
+[11:17] self-managed context uh in 2025 you know
+[11:21] last year I think people really got
+[11:22] started getting excited about file
+[11:24] systems and I think this is how a lot of
+[11:25] the um new memory implementations are
+[11:28] being done it's kind of treating memory
+[11:29] as files and more recently and you know
+[11:32] early this year we've been super excited
+[11:33] about the idea of kind of like git
+[11:35] tracking your agent memory um so what
+[11:37] does What does that kind of mean? I
+[11:40] think the thing we've probably all seen
+[11:42] if we've been working in AI agents since
+[11:44] like 2023 up until now is that like
+[11:46] today coding agents are general agents.
+[11:49] So if you want your agent to be really
+[11:51] good at editing its memory, uh the best
+[11:52] way to do it is to actually just allow
+[11:54] your agent to edit its memory through
+[11:55] code. And memory I think I'm using in a
+[11:59] very loose way. I think this also just
+[12:00] means context in general. So an agent
+[12:02] editing its own system prompt over time
+[12:04] should be done through code. And I think
+[12:06] a very simple example of this would just
+[12:08] be if you know I had a personal agent
+[12:10] and it had all these factoids about me
+[12:13] and it used my name Charles. Um let's
+[12:14] say one day I decided to change my name.
+[12:16] If the agent is managing its memory
+[12:18] through tool calls, it might be like you
+[12:20] know a ton of parallel tool calls it
+[12:22] needs to do to properly like update my
+[12:23] name and all the memory files. If an
+[12:25] agent is able to write code, you know,
+[12:27] like the the new Opus models are, then
+[12:30] it can just write a script to edit
+[12:31] memory in files. And so instead of
+[12:33] calling like a bunch of parallel tools
+[12:35] to edit my name in every single place,
+[12:37] it can either write Python code, it can
+[12:38] write bash code. So yeah, I think coding
+[12:41] agents being general agents is kind of
+[12:42] the new way of thinking about memory.
+[12:45] And I think this field in general we
+[12:47] like to call agent context engineering.
+[12:49] At Leta, if you kind of take a look at
+[12:51] our open source code, uh we spend a lot
+[12:53] of time thinking about like memory sub
+[12:54] agents that can kind of rewrite context
+[12:56] over time and specifically like can you
+[13:00] rewrite context or rewrite memory but
+[13:02] then track it in git the whole time. So
+[13:04] if you use let code the open source
+[13:06] project, your agents will all have
+[13:07] memory that's kind of tracked by git.
+[13:09] And one really cool thing that you can
+[13:11] do is you can kind of have like a let
+[13:13] code agent be an orchestrator of both
+[13:15] like cloud code itself or codecs. Um,
+[13:18] and this screenshot, I think what I was
+[13:20] doing was I was asking some memory sub
+[13:21] agents to kind of look at my cloud code
+[13:24] history and then also look at my codeex
+[13:25] history and then turn this into kind of
+[13:28] one coherent memory file or like set of
+[13:31] memories. And I think git is a very
+[13:34] natural way to do this because git then
+[13:36] allows you to like naturally manage
+[13:38] merge conflicts from like different
+[13:40] parallel fanout agents. So it's very
+[13:41] related, I think, also to like the
+[13:43] dynamic workflows concept that's kind of
+[13:44] in research preview.
+[13:47] And yeah, to kind of tie this back a
+[13:49] little bit more specifically to Opus
+[13:51] 4.8, I think, you know, when we think
+[13:54] about memory, you might be familiar with
+[13:56] like the open clause style of just
+[13:57] having a flat directory, maybe like a
+[13:59] memory.mmd, a soul.md. I think what
+[14:01] we're trying to do with Leta is um
+[14:03] taking this kind of to the next level.
+[14:05] So kind of having a full rich repository
+[14:07] of memory that can be kind of
+[14:09] represented as files. But you know
+[14:11] obviously we have very finite context
+[14:12] windows. You can't just shove all the
+[14:14] memory of from all time into your agents
+[14:16] memory. It's effectively context fraud.
+[14:18] So when you use lot of code there's a
+[14:20] subdirectory in the memory folder called
+[14:23] system and everything inside of system
+[14:25] gets pinned into the context window. And
+[14:28] like what's really cool about opus 4.8
+[14:30] is that you know if any edits to this
+[14:32] memory happens in real time like during
+[14:34] a single trajectory, you don't have to
+[14:36] kind of break the cache in order to
+[14:37] update this memory that's pinned into
+[14:38] the context window. You can kind of
+[14:40] incrementally um update it through the
+[14:42] new memory or through the new um system
+[14:45] role messages. And I'll kind of um kind
+[14:49] map this out with some diagrams uh a
+[14:51] little bit more after the demo. Um, I
+[14:53] think one other thing, you know, if you
+[14:54] are someone on this call and you're
+[14:56] really excited about memory, you've
+[14:57] probably also thought about is when you
+[14:59] do treat memory as files, there's kind
+[15:01] of a weird thing that happens where now
+[15:03] like your agent's brain is locked onto a
+[15:05] computer. And there's kind of these
+[15:06] weird questions about like, you know, if
+[15:08] I'm a human, I can use many different
+[15:10] devices. I can use my phone, I can use
+[15:11] my computer, I can use a Mac Mini, and
+[15:13] it's still me and it's still my, you
+[15:15] know, I carry my memories with me. But
+[15:16] if we were kind of operating this under
+[15:18] this model where the agents memories are
+[15:20] kind of stuck on a machine. I think you
+[15:22] know there's a weird thing where if the
+[15:24] the machine dies or the machine catches
+[15:26] on fire then your agent's memory is like
+[15:27] lost forever. I think this is not very
+[15:29] good. Um so another really great thing
+[15:31] about git tracking is that you can avoid
+[15:32] this problem because you can have a
+[15:33] centralized git server where you're
+[15:34] tracking all your agents memory and
+[15:36] clone it to any machine you want.
+[15:39] And yeah, if you're familiar with things
+[15:41] like, you know, cloud code or codeex or
+[15:44] openclaw, uh, this is really kind of the
+[15:46] big difference between like Leticode and
+[15:48] those other software projects. It's all
+[15:49] about making sure that you're tracking
+[15:51] memory and state in some centralized
+[15:53] place. So that if you use, you know,
+[15:55] your agent or your customers use their
+[15:56] agents on, you know, MacBook, Slack,
+[15:59] GitHub action, cloud, sandbox, whatever,
+[16:00] the memories are kind of like being
+[16:02] tracked um, no matter where they are.
+[16:04] And on the back end of this, you know,
+[16:06] so you kind of run a service on the back
+[16:07] end, you can connect this to any LM API
+[16:09] you want. Have the the anthropic API,
+[16:11] codeex, um, you know, whatever you're
+[16:13] using.
+[16:15] Okay, so I'm going to swap to a demo.
+[16:17] Um, and let me, you know, do this real
+[16:20] quick.
+[16:28] All right. Okay. So, I'm on a very
+[16:31] recent build of our desktop app right
+[16:33] now. Um, so, you know, this is truly a
+[16:35] live demo in every sense of the the
+[16:38] term. So, I have like a I have a backup
+[16:40] fail safe transcript here just in case
+[16:42] something goes wrong. Um, but what I'm
+[16:43] showing you right now is u the Leticode
+[16:46] desktop app. So, yeah, you can use this
+[16:48] um for free. It's, you know, something
+[16:50] you can download and like run completely
+[16:52] locally. I'm obviously because this is,
+[16:54] you know, a demo for Opus 4.8 going to
+[16:55] demo this on Opus 4.8. And you know this
+[16:58] screen probably looks pretty familiar to
+[16:59] you if you've used anything like the
+[17:01] cloud code desktop app or the you know
+[17:03] codeex app. I think a very big
+[17:06] difference is that you can see on the
+[17:08] sidebar it looks a little bit more like
+[17:09] discord because again leta it's all
+[17:11] about stateful agents this kind of this
+[17:13] agent that you can carry you know kind
+[17:15] of carry state across any device. Um you
+[17:18] kind of or we organize conversations and
+[17:20] group them into persistent ids or agent
+[17:23] ids or entities. Um so this is a real
+[17:26] agent I have. This is actually my I am
+[17:28] logged into my real account. Um, so
+[17:29] we'll look at like my real memory in a
+[17:31] second. Um, but yeah, you can see you
+[17:32] have agents on the left, but then
+[17:33] everything on the middle that kind of
+[17:35] might might look a little bit more
+[17:36] similar to what you've seen before. And
+[17:38] then, you know, memory is a real
+[17:40] emphasis of our products and the
+[17:41] software we write. Um, so we do a lot
+[17:43] more there, but to kind of just show
+[17:45] you, you know, what's going on here, I
+[17:47] can actually, let's go ahead and create
+[17:48] a fresh agent here. So, I'm going to
+[17:50] create this a fresh agent called tutor.
+[17:54] We have the reason I'm using this one is
+[17:55] because it knows that it's meant to
+[17:57] showcase leta memory features. So it
+[17:59] likely it's much more likely to do
+[18:00] things like memory editing. If I chat
+[18:02] with this one, what's what this is doing
+[18:05] on the back end is it's initializing you
+[18:07] know all this persist it's initializing
+[18:09] like a persistent agent ID identifier
+[18:11] for this agent. um so that every single
+[18:13] conversation we have with this agent and
+[18:14] every memory edit is all tracked
+[18:16] centrally to one persistent entity as
+[18:18] opposed to kind of being like loose
+[18:20] conversation threads that are associated
+[18:21] with the model like a claude um or a
+[18:23] codeex model.
+[18:25] All right, so let me actually go ahead
+[18:28] and swap this.
+[18:33] Okay, swapped to Opus 4.8. Yeah. So, you
+[18:37] know, I've been doing these sorts of
+[18:38] demos for a while now. Um, so I think
+[18:40] memory, you know, the ceiling is very
+[18:42] high. You know, I think in in the limits
+[18:44] what memory looks like is you kind of
+[18:45] have a teachable agent that can kind of
+[18:47] replace yourself in many ways, but you
+[18:49] know, these demos it's always easiest to
+[18:51] do something very simple like um, hey,
+[18:54] nice to meet you.
+[18:56] My name is Charles. I'm doing a live
+[18:59] demo to showcase
+[19:03] agents features. Uh, okay. See if this
+[19:07] works.
+[19:12] Okay, so if you can't read the text, it
+[19:14] says, "Hi, Charles. I'm Tutor. That's
+[19:16] the agent's name." Kind of the preset
+[19:17] name for this template. It's nice to
+[19:19] meet you and good timing because memory
+[19:20] is the thing I'm built around. So live
+[19:22] demo is in the pocket. I'm not quite
+[19:24] sure what that means. I assume this is
+[19:26] some slang I'm not familiar with. Um,
+[19:28] let me do it. Let me do the first one in
+[19:30] the open so your audience can see it
+[19:32] happen rather than just hear about it.
+[19:34] I'm writing your name into memory right
+[19:35] now. So if I open this edit um you can
+[19:38] see it kind of edited its human.mmd file
+[19:41] which is inside of the system
+[19:42] subdirectory right so system means that
+[19:44] this is pinned to the context window um
+[19:47] and yeah I kind of like wrote some uh
+[19:49] something about me and like the context
+[19:51] and that I'm doing a live demo and I
+[19:52] think real quick to call out you know
+[19:54] more from a developer perspective what
+[19:56] happened behind the scenes here. So if
+[19:59] we pop out to the memory viewer, you
+[20:02] will see
+[20:04] Oh, I might have to refresh this. Um,
+[20:08] okay, we might be facing the curse of
+[20:09] the live demo. Okay, well what happens
+[20:12] when you know the agent edits its memory
+[20:14] is this kind of gets written out to the
+[20:16] file. It gets committed and pushed to
+[20:17] the GitHub repo. Um, but then if you
+[20:20] weren't using Opus 4.8, we actually
+[20:22] would not bust your cache. So we would
+[20:24] kind of wait until a natural cache
+[20:26] eviction happens. So like a compaction.
+[20:28] So you can see here we're at the we're
+[20:30] only at 12K out of 200 to 200k tokens.
+[20:32] Once we hit 200k tokens, we have auto
+[20:35] compaction built in. That's a natural
+[20:36] cache eviction event. So we would
+[20:38] actually wait to recompile the system
+[20:40] prompt until this event. However, with
+[20:43] Opus 4.8, we can actually kind of
+[20:45] include the memory edit or the delta
+[20:48] inside of the transcript more eagerly.
+[20:50] uh because we you know we have this
+[20:52] ability to not to update the system
+[20:53] prompt incrementally as opposed to like
+[20:55] just do an entire um you know entire
+[20:58] system prompt update that will kind of
+[20:59] evict the cache for the entire
+[21:00] conversation and yeah you can see it did
+[21:04] that after it you know this all get
+[21:05] trapped so after it edited the memory it
+[21:07] went into the memory directory it added
+[21:10] the file um and it committed it and it
+[21:12] recorded this commit as human record
+[21:14] Charles's name in demo context okay
+[21:17] let's see
+[21:19] Okay, I guess yeah, we are facing the
+[21:22] curs of live demo because it's not
+[21:23] visualizing here. What I'll do is I'll
+[21:25] actually just show you my real agent.
+[21:27] Um, so this is my agent that I use to
+[21:29] build things like a lot of code. And if
+[21:30] you pop over to the memory viewer,
+[21:33] you will see once this loads, I think I
+[21:35] have a lot of memory, which is why it's
+[21:36] taking a little bit of time. Um, like
+[21:38] over time, you know, the memory
+[21:40] naturally gets more and more complex.
+[21:42] Kind of links can form between, you
+[21:43] know, parts of the memory. Um, I'm not
+[21:46] going to open any of these just in case
+[21:47] there's kind of like PII or something,
+[21:49] but everything that is blue uh means
+[21:51] that it's pinned to the system prompt.
+[21:53] So these are this is, you know, in
+[21:54] context all the time. And you can see
+[21:57] that, for example, things in the system
+[21:58] prompt, they actually link out to things
+[22:01] that are outside of the system prompt.
+[22:02] So this is very similar to skills
+[22:04] progressive disclosure of context,
+[22:05] except it's for memory. So you have
+[22:07] progressive disclosure of memory
+[22:08] context. And another thing I want to
+[22:12] point out real quick before I hop back
+[22:13] off of this demo is see.
+[22:18] Yeah, so we also have a concept of
+[22:20] dreaming. So every end turns or on like
+[22:22] certain compaction events or certain
+[22:24] events like compaction um you can
+[22:26] actually run like a dream cycle. So here
+[22:28] for this demo I set it arbitrarily low
+[22:31] you know every one step that my agent is
+[22:33] going to kind of spawn a memory
+[22:35] background agent to dream about what's
+[22:36] happened. Um, but this is just to you
+[22:39] would never do this in real life because
+[22:40] this is super expensive. You probably
+[22:42] would set it to something like 15 or you
+[22:44] know um 100 or you just set it to be on
+[22:47] compaction events. But if I say
+[22:48] something like um
+[22:52] let's keep going.
+[22:54] Yeah. So it kind of kicked off um a
+[22:57] dream agent in the background. So it's
+[22:58] entering deep sleep is kind of the
+[23:00] little thing we're showing here.
+[23:01] Apologies if this is a little bit too
+[23:03] tiny to see. Um, but what this is what's
+[23:05] going on here is the agent or background
+[23:07] agent that kind of has access to the
+[23:09] memory is being kicked off. It is going
+[23:10] to reflect on everything that's happened
+[23:11] in this conversation. And you know,
+[23:14] prior to this demo, I did run this once.
+[23:16] So, if we hop over to the memory for
+[23:18] this agent, you can see that there was a
+[23:21] dream that ran and the outcome of this
+[23:23] stream running was a commit was written
+[23:25] to the memory. So, it kind of deleted
+[23:28] this part that said onboarding task is
+[23:30] for new users and it replaced it with I
+[23:33] can't quite tell what is different here.
+[23:35] I guess it's dropping this segment. Um,
+[23:38] and then yeah, it says, you know,
+[23:39] instead of saying the user has been
+[23:40] active since todo, it has replaced it
+[23:42] with the user has been active since 2026
+[23:44] 0604.
+[23:47] All right. So, I think I will pause
+[23:49] there. Other you know, quick things I'll
+[23:51] just show is that you can do like, you
+[23:53] know, schedules and channels and
+[23:54] everything is, you know, this is all
+[23:55] open source. So you can use this in the
+[23:57] 2e as well. All right. So I'm going to
+[23:59] swap over to slides now.
+[24:05] Um
+[24:07] okay.
+[24:12] Okay. And yeah I think you know just to
+[24:15] be very clear about you know what is
+[24:17] different here about opus 4.8 I was
+[24:20] talking about this idea of like KB
+[24:21] caching. I think many on your call or
+[24:23] many people on the call probably are
+[24:24] very familiar with this. Maybe some
+[24:25] people are wondering like what am I even
+[24:27] talking about? Um the idea is that you
+[24:28] know you have this language model. It's
+[24:30] an agent that is persistent. It should
+[24:32] naturally update its information over
+[24:33] time outside of just you know the model
+[24:35] is getting better and better. It should
+[24:36] have its own personalized experience.
+[24:38] And the best way to kind of have your
+[24:39] agent learn over time and kind of adapt
+[24:42] its behavior through experience is to
+[24:44] update the system prompt. Right? The
+[24:45] system prompt as a developer. This is
+[24:47] where you have all the control to really
+[24:49] tune and personalize opus to not just be
+[24:51] like clawed but be something more
+[24:53] specific to you or your customers. So
+[24:54] you do want to update the system prompt.
+[24:56] Um but you know if you're familiar with
+[24:58] the KV caching if you update the system
+[25:00] prompt are you know lazily or eagerly in
+[25:03] your u in your agent loop you're going
+[25:05] to bust the cache. And what does this
+[25:07] mean? It means that you're going to be
+[25:09] be paying basically 10x the cost for
+[25:11] that payload. Um so you really don't
+[25:13] want to do this. I think you know the
+[25:15] math is a little bit funky because
+[25:16] obviously you're not going to be busting
+[25:17] the cash all the time. Um there's like
+[25:20] you know read read cache versus write
+[25:22] cache. But I think as a company that
+[25:24] that does deploy a lot of these agents
+[25:25] at scale, I will say that the the price
+[25:28] differentials is really big. So if you
+[25:29] care, you know, if you're serving agents
+[25:31] in production, you should really be
+[25:32] careful to preserve the cash and you
+[25:33] should probably have regression testing
+[25:34] in your platform to make sure that you
+[25:36] are preserving the cash. Um, so yeah,
+[25:38] kind of the the loose napping math is
+[25:40] it's going to be 10x cheaper if you do
+[25:42] something like you wait until the some
+[25:45] sort of cash eviction is going to happen
+[25:47] anyways. So this would be like a
+[25:48] compaction. So you have to you have to
+[25:51] change you know the the message layout
+[25:53] and bust the cache because you've kind
+[25:54] of overflowed the context window. It's
+[25:56] very normal. I think most Asian
+[25:57] frameworks have like context auto autoco
+[25:59] compaction built in um like let code
+[26:01] cloud codeex. Um so this is a very
+[26:04] natural opportunity to then really
+[26:06] quickly you know update the memory in
+[26:07] the system prompt. So you don't you
+[26:09] don't have to pay any additional
+[26:10] penalty.
+[26:12] And now the thing that we were really
+[26:14] excited about with Opus 4.8 is that the
+[26:15] messages API accepts system entries
+[26:17] inside of the messages array which means
+[26:19] you can update the system prompt um kind
+[26:22] of uh more equally as opposed to lazily
+[26:25] and yeah you know very specifically this
+[26:27] just means you can inject RO system into
+[26:29] your payloads and you know if I had to
+[26:32] map this out into figure what what this
+[26:34] really looks like is any sort of
+[26:37] experience update or like experience to
+[26:39] memory update that's happening for your
+[26:41] agents you can kind of do it you know
+[26:43] before updating the big system prompt
+[26:45] you can kind of just do it by adding
+[26:47] additional deltas um through these RO
+[26:49] system messages. These are all very cach
+[26:51] safe. They're incremental. Um and then
+[26:53] at the same time you can also do the
+[26:56] larger system prompt swaps um once you
+[26:58] actually you know have to evict the
+[26:59] cache on like a compaction event or
+[27:01] something like that.
+[27:03] Some other Opus 4.8 takeaways. So we are
+[27:06] a research lab so we do a lot of
+[27:07] benchmarking of these models. I think
+[27:08] the two big ones for developers are that
+[27:10] we find that opus 4.8 is a lot more
+[27:12] token efficient than 4.7 and it's also a
+[27:14] lot better at memory adherence.
+[27:17] So what do I mean by token efficiency?
+[27:19] We have this plot here on our one of our
+[27:21] internal benchmarks called contextbench.
+[27:22] You can see that compared to opus 4.7 um
+[27:26] opus 4.8 to do the same task is calling
+[27:29] fewer tools um it also just generally
+[27:31] has you know significantly better um for
+[27:34] this very similar performance kind of
+[27:35] within standard error it has um
+[27:37] significantly less tokens that it's
+[27:39] using to complete the task. So this just
+[27:41] means for you this will cost less to
+[27:43] serve and I also you know for fairness
+[27:46] included you know GPD 5.5 on here which
+[27:48] you can see is a lot more um token
+[27:50] efficient but then you know there is
+[27:52] kind of a significant performance delta
+[27:54] between the two. So you know kind of a
+[27:56] costbenefit trade-off analysis.
+[27:59] Yeah. So the other thing I mentioned was
+[28:00] like better at memory adherence. So I
+[28:02] think this is very important. um you
+[28:04] know you can as an engineer that is not
+[28:06] working on the models you're working
+[28:08] more on the the prompting layer or the
+[28:09] harness layer you can do really great
+[28:12] stuff that means that your memories are
+[28:14] really exceptional like all the guidance
+[28:16] the model is really exceptional but even
+[28:19] if you have the best memories in the
+[28:20] world it doesn't mean anything if the
+[28:22] model under the hood kind of refuses to
+[28:24] use the memories to personalize itself
+[28:26] um so we have something that we call the
+[28:28] context constitution if you're
+[28:29] interested in reading what the
+[28:30] methodology around this you can check
+[28:31] out our research blog on red teaming the
+[28:33] context constitution. But the idea here
+[28:35] is that if you are adhering to the
+[28:37] context constitution as a model, then
+[28:39] you are really leaning in to any memory
+[28:42] that is provided in your system prompt.
+[28:43] So if your system prompt says that you
+[28:45] should behave in a certain way that is
+[28:47] more personalized to specific user or
+[28:49] more specific use case, um lower is
+[28:51] better. So if you are violating the
+[28:53] context constitution less, it means you
+[28:55] are generally adhering to memory a lot
+[28:56] better. And I I will say, you know, very
+[29:00] broadly, we definitely see that
+[29:01] Enthropic like leads, you know, leads to
+[29:03] pack here. Their models do a lot better
+[29:06] um than anything else on the market
+[29:07] right now at kind of being able to be
+[29:10] personalized through kind of memory in
+[29:12] the system prompt. And yeah, compared to
+[29:14] Opus 4.7, Opus 4.8 is also a significant
+[29:18] increase in performance here. So this is
+[29:20] really about personalization. So if
+[29:22] you're a developer or an individual and
+[29:24] you care about personalization, you
+[29:26] know, so that opus does not always sound
+[29:28] like opus. It kind of sounds like
+[29:29] something else or something more
+[29:30] meaningful to you or your customers.
+[29:32] Opus 4.0 is also um a significant
+[29:35] improvement in that regard.
+[29:37] All right, so I'm going to pause there.
+[29:39] I think I will now
+[29:42] hand it off um to Amid.
+[29:50] >> Perfect. Awesome.
+[29:53] Thanks so much, Charles.
+[29:59] >> So, uh, next up, uh, is going to be
+[30:02] Shray Panda. He's a growth engineer at
+[30:04] Browserbase and Shu, who's a sales
+[30:06] engineer at Browserbase as well. Shay
+[30:08] and Shu, over to you guys.
+[30:13] Awesome.
+[30:15] Hey everyone, super excited to be here
+[30:17] and thanks Amit for the intro. I'll get
+[30:20] started by sharing my screen for
+[30:22] everyone.
+[30:26] One second.
+[30:33] Great. Well, like mentioned, um, we're
+[30:36] browserbased. I'm a growth engineer on
+[30:39] the team, and browserbase is the
+[30:41] complete platform for people to build
+[30:43] agents that interact with the web like
+[30:46] humans. And so concretely that means a
+[30:48] couple of different features. Uh as AMD
+[30:51] mentioned we offer infrastructure at
+[30:53] scale to spin up remote headless
+[30:56] browsers in the cloud. That means you
+[30:58] can spawn thousands of sessions
+[31:00] concurrently and interact with them the
+[31:02] way you might with any any other kind of
+[31:06] automation. So that means logging into
+[31:08] sites, that means clicking buttons,
+[31:11] scraping information, anything you might
+[31:12] use in an actual browser, you can do on
+[31:14] browserbased. Um, and it also means the
+[31:17] tools around the ecosystem. So we offer
+[31:22] a search API, a fetch API, the tools
+[31:24] that you might need auxiliary to kind of
+[31:27] perform knowledge work on the web. Uh,
+[31:30] as well as a lot of the footguns that
+[31:32] people face when they're actually
+[31:34] interacting with browsers and doing web
+[31:37] work, which might be uh captas, it might
+[31:41] be getting rate limited or blocked. And
+[31:43] so we offer a verified browser that
+[31:46] gives your agents identity so they avoid
+[31:49] these kinds of issues um when
+[31:51] interacting with the web and are able to
+[31:53] complete these tasks the way a human
+[31:54] would. And so a lot of customers use
+[31:58] browserbased for a ton of different
+[31:59] issues, but concretely it boils down to
+[32:03] trying to automate work on behalf of
+[32:04] humans. And pretty much every kind of
+[32:07] task that you might do requires a touch
+[32:09] point with the web. You're searching for
+[32:11] information. you're fetching page
+[32:14] information. Um, and then at some point
+[32:16] there's a last mile where you have to
+[32:17] perform some action on behalf of of a
+[32:20] human. So you might have to book a
+[32:22] flight, you might want to look up
+[32:23] reservations for restaurants, you might
+[32:26] want to pay your rent online or uh
+[32:29] upload an invoice to a vendor portal.
+[32:32] Uh, all these tasks will require
+[32:35] interacting with what we call the middle
+[32:36] internet. This is kind of the 85% of the
+[32:39] web that doesn't really have structured
+[32:41] APIs or support MCPS. And it's really
+[32:44] there where browserbase is the most
+[32:46] useful. Whenever you need to have an
+[32:48] agent or any kind of automation actually
+[32:52] interact with the web and perform these
+[32:54] tests, browserbase is the solution to do
+[32:56] so at scale. And so you can see we power
+[32:59] lots of different use cases uh and lots
+[33:01] of different customers. Um some of our
+[33:03] most important use cases are for
+[33:05] automating the middle internet. So that
+[33:07] might be ramp with receipt automation
+[33:10] and powering procurement agents to
+[33:11] automatically go and uh download
+[33:14] receipts from different vendor portals
+[33:16] on behalf of their customers. Um it
+[33:18] might be lovable who uses us for UI
+[33:20] testing the apps that users create. Um
+[33:23] and it includes a ton of different uh
+[33:26] vertical SAS companies that are building
+[33:29] uh automations in healthcare or
+[33:30] insurance and need to both interact with
+[33:32] legacy ERPs or CRM. Um, and it's also
+[33:35] powering deep research agents that might
+[33:37] need to actually interact with websites
+[33:40] and scrape and uh, fetch information at
+[33:44] scale. And so those are a lot of the
+[33:45] core use cases that browserbase powers.
+[33:48] Uh, and we do this all through an SDK or
+[33:50] what we like to call it a harness for
+[33:52] building browser agents called Station.
+[33:54] Um, and so I work very closely with this
+[33:56] team. Uh, and it's kind of our answer to
+[34:00] how do agents best use the capabilities
+[34:03] of these models like uh, Opus 4.8 or any
+[34:07] other kind of model um, to be able to
+[34:10] reliably access the information that
+[34:13] they're seeing and interact
+[34:14] birectionally with browsers. And so I'll
+[34:17] talk a little bit about that. So stage
+[34:19] hand is what we call this SDK for
+[34:21] building browser agents. Um it's
+[34:23] essentially a if for those who are
+[34:25] familiar with traditional browser
+[34:26] automation frameworks like Playright,
+[34:28] Puppeteer or Selenium, it's our answer
+[34:30] to how to build an AI powered uh browser
+[34:32] automation framework that helps models
+[34:36] best use and interact with the DOM. And
+[34:38] so what we do is we offer a lot of
+[34:41] higher level primitives that are uh able
+[34:44] that allow models to interact with
+[34:48] websites using natural language
+[34:50] primitives. So you can think of instead
+[34:51] of having to um you know say page.go or
+[34:57] click on a specific button or wait for a
+[34:59] selector and access things
+[35:01] deterministically. Instead you describe
+[35:03] actions in natural language. So you
+[35:04] might say uh you know page.act
+[35:07] um click the reserve button in the top
+[35:10] right. Or for extract, you might say
+[35:13] given uh an output schema of uh a ticket
+[35:17] ID and the price uh find all the um you
+[35:21] know all the ticket prices on a certain
+[35:22] website. You might observe and try to
+[35:24] find a certain selector uh or what we'll
+[35:27] be talking about in this demo. You might
+[35:29] use the composition of all of these
+[35:31] different primitives in our agent mode
+[35:33] which allows you to give a highle prompt
+[35:35] and then the agent is able to figure out
+[35:37] what specific uh primitives it wants to
+[35:39] use in order to accomplish that task.
+[35:41] And this is really where opus 4.8 really
+[35:44] shines with us and you know where I
+[35:46] think model capabilities are being are
+[35:48] are kind of pushing this framework and
+[35:50] stage hand and the whole industry
+[35:52] forward. agents are incredibly uh
+[35:54] powerful at interacting with these
+[35:56] primitives. Um, and they're able to,
+[35:59] especially for long horizon tasks, uh,
+[36:02] iteratively, you know, go through a
+[36:03] task, break it down into subtasks, and
+[36:06] best interact with the web through these
+[36:09] kinds of primitives. And so, kind of to
+[36:11] show you this in action, uh, we have a
+[36:14] task that's very representative of what
+[36:16] of the kind of work that some of our
+[36:17] customers will do, which is looking at
+[36:19] SEC filings. And so these are public
+[36:22] company filings uh filed with the US
+[36:24] government. Um and typically a task that
+[36:27] a deep research agent might do is going
+[36:30] in searching for SEC filings on specific
+[36:33] companies, doing research into different
+[36:36] uh statistics uh such as like the
+[36:38] revenue or the growth rate uh as
+[36:40] published here and sifting through those
+[36:42] documents, finding specific pieces of
+[36:44] information and then comparing them and
+[36:46] generating a comparison table. that is
+[36:48] like five or six different steps all
+[36:50] combined in one. And so this is
+[36:52] something that originally like when
+[36:54] these models first hit the scene with uh
+[36:57] you know like uh Opus 4 or like GBT 5
+[37:01] things like that these models really
+[37:03] struggled to be able to perform long
+[37:05] horizon tasks and break down steps. Uh
+[37:09] and in this demo you'll actually see
+[37:11] this composition of tasks work really
+[37:13] well with browser base. So I'll jump
+[37:15] right into the demo and how this works.
+[37:16] So, stage hand as I described is our SDK
+[37:18] for doing this. Um, and it's available
+[37:21] in every language. Uh, here you'll see
+[37:23] it specifically in uh, TypeScript in
+[37:26] JavaScript or our canonical
+[37:27] implementation. And I'll zoom in a bit
+[37:28] for anyone who needs to read this. But
+[37:30] essentially, it's one import. So, it's
+[37:33] uh, you know, a PNPM installer or an npm
+[37:36] install. Uh, we'll set the model here
+[37:38] that we're using. And then this is kind
+[37:39] of the highle task that we'll be
+[37:41] describing. So you'll see here that
+[37:43] we're describing things the way that a
+[37:45] human that you might describe attached
+[37:47] to a human as opposed to the way you
+[37:48] might write an automation. So we're
+[37:50] talking about, you know, you're
+[37:51] researching SEC filings. Here are the
+[37:54] three companies we're going to compare,
+[37:55] which are Snowflake, Data Dog, and
+[37:56] MongoDB, all three public companies. And
+[37:59] then we describe the task. So we're
+[38:01] trying to find their most recent SEC
+[38:02] filing. Um we're going to start at this
+[38:05] website or use their company search.
+[38:07] We're going to open the document. Um,
+[38:09] and then from inside that document,
+[38:11] which is an HTML document, we're going
+[38:12] to extract these three pieces. Um, and
+[38:15] then for all three of those, we want to
+[38:17] finally then collate those into a
+[38:19] comparison table. And the and report any
+[38:22] stats we saw. Uh, and so this is like
+[38:25] you might see this is kind of where the
+[38:26] future of knowledge work is going,
+[38:27] right? You're describing a task in the
+[38:29] way you would describe it to a human.
+[38:31] Um, and so we'll see kind of how stage
+[38:33] hand agent breaks this down. So uh you
+[38:36] see we'll initialize a stage hand uh
+[38:39] session. Um we'll kick off stage hand to
+[38:43] connect to browserbase and we'll open up
+[38:45] a live view and then from there we'll
+[38:47] start off on the main page and we'll
+[38:49] literally just give this to our agent.
+[38:50] We'll we'll kick off an agent and we'll
+[38:52] give it that task. We'll give it a
+[38:53] budget of 50 steps to complete that task
+[38:55] and we'll print the result. So you can
+[38:57] see this is kind of like a fully agent
+[38:59] agentic uh workflow here. And so I'll
+[39:02] just jump right in and show you what
+[39:03] this will look like. So,
+[39:06] so I'll jump right to starting that
+[39:08] script. And while that starts, I'll move
+[39:12] this over. And now that our session is
+[39:14] open, you'll see that this is actually a
+[39:16] live remote session running with a full
+[39:18] live view, full analytics onto the
+[39:20] network requests and what's actually
+[39:23] happening. And so this will take about
+[39:24] three minutes. So in the meantime, I'd
+[39:25] like to invite Shu, uh, one of our sales
+[39:28] engineers at Browserbase up to talk a
+[39:30] little bit more about how customers use
+[39:32] Browserbase. Awesome. Hey Shu, how are
+[39:34] you? Hey,
+[39:35] >> good.
+[39:37] >> Awesome. Yeah, I I'd love to start off
+[39:39] by just talking about, you know, I
+[39:40] talked a little bit about how customers
+[39:41] use browserbase. Um, you know, can you
+[39:44] tell me a little bit more about what
+[39:45] you're seeing are how our most agentic
+[39:47] customers and most cutting edge
+[39:48] customers are using browserbase to build
+[39:50] agents like this?
+[39:51] >> Yes. Um, I am browserbas's first
+[39:55] customer. You know, I use browserbase
+[39:57] all the time to do all sorts of browsing
+[39:59] tasks. Um for example, I need to find
+[40:01] restaurant reservations and I ask cloud
+[40:04] code to use browser base and uh find me
+[40:06] restaurant reservations. Uh but
+[40:08] importantly I think in enterprises uh
+[40:10] you talked about customers like lovable.
+[40:12] Lovable uh helps you build applications
+[40:16] and if you want to test those
+[40:17] applications you need a browser and you
+[40:20] want this agent to go out and sort of
+[40:22] click on buttons, see if your dark mode
+[40:24] works correctly. uh you want your agent
+[40:27] to be able to test things in the
+[40:29] background and give you reports maybe
+[40:31] every day. Um so lovable uses browser
+[40:33] base um explicitly for that use case. Um
+[40:37] interestingly we talked about ramp as
+[40:39] well. I think I saw this in the Q&A
+[40:41] uh ramp uses browserbase to go out uh
+[40:46] let's say you booked a flight or you
+[40:47] booked a hotel right and you need to
+[40:50] submit reimbursements uh ramp will do
+[40:52] that for you. they'll go to United
+[40:54] Airlines or whichever u uh portal uh
+[40:57] pull the receipts for you and submit
+[40:59] them as reimbursement so that you don't
+[41:01] have to uh we also have customers like
+[41:04] Clay. Now Clay helps you do a lot of
+[41:07] research uh on your uh GTM pipeline on
+[41:10] your lead list uh and Clay has this
+[41:12] agent called Clay agent uh which uses
+[41:14] browser based behind the scenes uh to do
+[41:17] this where you want to do uh public
+[41:20] research on the web. For example, what
+[41:22] we're seeing in this demo, right? We're
+[41:23] we're trying to pull uh SEC documents
+[41:26] from publicly available information and
+[41:28] an agent can sort of navigate unseen
+[41:30] scenarios, popups, ad blockers, all
+[41:33] sorts of uh situations and and get past
+[41:37] and and get the information it needs.
+[41:40] >> Awesome. Yeah. No, and you can see kind
+[41:42] of what's going on here. Just to also
+[41:44] narrate a little bit, you're seeing the
+[41:45] agent have all these different tool
+[41:47] calls that we're mentioning and going
+[41:48] through the reasoning. So you're seeing
+[41:50] it, you know, take snapshots of the DOM.
+[41:51] You're seeing it, you know, go through
+[41:53] and perform these long horizon tasks of
+[41:55] trying to extract certain pieces of
+[41:56] information. Um, and yeah, so it is it
+[41:59] is kind of like this very um, you know,
+[42:01] long form task. So while that keeps
+[42:02] running, um, I also wanted to ask you a
+[42:04] little bit about how we're seeing the
+[42:07] field of uh, building these kinds of
+[42:09] automations for enterprises change as
+[42:11] model capabilities get better, right?
+[42:12] like where do you see um you know I
+[42:15] think people started off by building
+[42:17] like playwright automations right using
+[42:20] these scripting tools uh now people are
+[42:22] trying to codegen that uh they're
+[42:23] generating skills what are you seeing in
+[42:26] terms of how customers are thinking
+[42:28] about the future of building browser
+[42:30] agents and where things might go as
+[42:31] model capabilities keep getting better
+[42:33] and better.
+[42:34] >> Yeah. Yeah. I mean uh just in the last
+[42:36] year or so the model capabilities have
+[42:38] gotten so much better that we see unseen
+[42:41] use cases now possible uh that can be
+[42:44] done on a browser right uh opus 48 is
+[42:47] the best model that we have seen u in
+[42:49] the anthropic series uh and and we think
+[42:52] a lot about the bitter lesson here as
+[42:54] well right like as models improve u what
+[42:57] capabilities should we as browserbase u
+[43:01] work on um so that the browser agents
+[43:03] that are um available to our customers.
+[43:06] How do they get better? Um and and we
+[43:09] adapt with the models. Um people are now
+[43:11] starting to do much more long horizon
+[43:13] browsing tasks. Their browsers can go
+[43:15] off to 15 minutes, 20 minutes doing deep
+[43:18] research tasks and we want to be able to
+[43:20] give the tools to support that, right?
+[43:22] Uh so initially when we started out
+[43:24] building stage hand we had these
+[43:26] primitives called act extract or observe
+[43:29] uh which would do atomic tasks like hey
+[43:31] go click on the login button or go pull
+[43:34] this information but now we have agents
+[43:37] uh which can do much more long horizon
+[43:39] tasks uh where you can give a vague
+[43:41] prompt and the agent 48 is smart enough
+[43:44] to figure out what do u sometimes in
+[43:47] these tasks you have humans in the loop
+[43:49] right you need to get OTPs or uh you
+[43:52] need to verify something uh and we have
+[43:54] custom tools to allow for humans in the
+[43:56] loop as well. Um so we think about as
+[43:59] models get better how does the hardness
+[44:01] around browsing get better as well and
+[44:03] that's what we invest a lot in um and I
+[44:06] think parallelly as we start to think
+[44:08] about this the natural concern that
+[44:11] people have is uh what about costs and
+[44:13] what about uh token spend here uh and
+[44:16] how do I ensure that I can do longer
+[44:18] browsing but still not blow my bills uh
+[44:22] and that's where we invest in things
+[44:24] like caching right if your website is
+[44:26] not changing ing a lot. Uh so you should
+[44:29] not be spending a lot uh on on
+[44:32] automating the same website, right? We
+[44:33] can cache the selectors and the HTML
+[44:36] elements that you see on the same
+[44:38] website and save on cost there. We also
+[44:41] invest a lot in tools uh to help you
+[44:44] build browsing specific skills. Uh
+[44:46] skills has been a really big gamecher in
+[44:49] how uh browser agents can browse. uh and
+[44:52] we uh actually use the uh Karpathi's uh
+[44:55] concept of auto research but apply to
+[44:58] browser agents and we can sort of train
+[45:01] uh browser agents to be smarter on let's
+[45:03] say booking flights or or booking hotels
+[45:06] uh and create custom skills for each one
+[45:08] of those uh we call this concept as auto
+[45:11] browse as like auto research for
+[45:13] browsing so
+[45:15] summarizing I think as models are
+[45:17] getting better we're building the tools
+[45:19] around them so that longer uh browsing
+[45:21] task can also be possible.
+[45:24] >> Awesome. Great. Well, thanks Sh. Now I
+[45:26] guess let's let's go and actually show
+[45:28] the automation's actually completed and
+[45:30] you can see this is a live replay of all
+[45:32] the actions that were taken. Uh you can
+[45:35] see kind of the different uh you know
+[45:37] actions that were taken the different
+[45:38] websites that were accessed. So you can
+[45:40] see this is where snowflake was found
+[45:42] and you can see the final answer here uh
+[45:44] was provided here on the individual
+[45:48] pieces of data for MongoDB data dog and
+[45:51] snowflake. Um and so you can see all
+[45:53] these pieces reported um and this is
+[45:56] kind of what you you might do when
+[45:58] automating a task like this. And so I
+[46:00] also wanted to talk a little bit about
+[46:02] how this actually compares to 4.7 which
+[46:04] is also already a very capable model.
+[46:06] But this was actually a very hard task
+[46:08] for 4.7 to complete reliably. And so to
+[46:11] switch back to now what we're seeing
+[46:13] with Opus 4.8 um we we have uh a very
+[46:17] rigorous evaluations package uh when
+[46:20] using stage where you can evaluate these
+[46:22] runs on different models, different
+[46:23] harnesses uh and different capabilities.
+[46:25] And you can see that uh 4.7 for this
+[46:28] task uh on n equals 10 runs was able to
+[46:32] complete it uh 30% of the time. Uh
+[46:34] whereas opus 4.8 always completed it uh
+[46:37] 100% of the time. And you can see that
+[46:39] there is a cost difference here. But
+[46:41] basically what we're really noticing
+[46:43] with opus 4.8 is that it's a much more
+[46:45] reliable model. It's a much more
+[46:46] persistent model and it's much better at
+[46:48] completing these long horizon tasks and
+[46:51] also giving the correct answer by the
+[46:53] end of the question. Um, and I think
+[46:55] that's really important because when
+[46:56] we're dealing with the web, there are so
+[46:58] many issues of being able to uh, you
+[47:02] know, parse the DOM. The like HTML is
+[47:04] completely different depending on what
+[47:06] site you're looking at. There's it's a
+[47:07] very like weak standard in some ways.
+[47:09] Um, many agents won't know how many
+[47:11] pages they have to actually browse and
+[47:14] click through to find the information
+[47:15] they're looking for. Uh, there might be
+[47:17] pop-ups that show up as Shu mentioned.
+[47:19] And so there's lots of basically foot
+[47:21] guns and ways that you might uh miss the
+[47:25] the the answer you're looking for and go
+[47:26] down different paths. And so a
+[47:28] deterministic path is never something
+[47:29] you can optimize for. So having the most
+[47:31] intelligent, most reliable, most
+[47:33] persistent model uh is always the most
+[47:35] important uh part of what we do at
+[47:39] browserbase and what's really important
+[47:40] with these models. And so we're seeing
+[47:41] here with Opus 4.8
+[47:43] that basically there's a 20 cent
+[47:45] difference in these costs which is a 10%
+[47:47] increase in token cost or cost per task
+[47:50] but for that 10% increase you're getting
+[47:53] 100% reliability and I think for
+[47:55] enterprises this is like a huge unlock
+[47:57] right you you want your automations
+[47:59] especially when you're building these
+[48:00] pseudo pseudeterministic automations
+[48:02] that kind of have a model drive the
+[48:04] browser through this this uh framework
+[48:08] when the alternative is a 100%
+[48:10] deterministic playwright or puppeteer
+[48:13] Selenium script that might go stale or
+[48:16] might not be able to self-heal. Well, at
+[48:17] least that's 100%. The difference here
+[48:19] is that you don't have to trade either
+[48:20] off. You can use an AI powered browser
+[48:23] automation framework like stage hand
+[48:24] with a platform like browserbased and
+[48:26] achieve 100% reliability which matters
+[48:29] all the time when you're actually
+[48:31] working with real customers that require
+[48:34] no downtime. They require their
+[48:35] automations to work. uh and stage hand
+[48:38] is uniquely equipped because of uh the
+[48:41] these models to be able to navigate,
+[48:44] steer, and you know, self-heal and
+[48:46] complete tasks reliably. Um and so that
+[48:49] was kind of our experience when
+[48:50] evaluating 4.8. And we're really excited
+[48:52] for what this can do for our customers.
+[48:54] Uh the last thing that I wanted to touch
+[48:55] on is uh what we have and what the way
+[48:59] that we evaluated uh 4.8 was using a
+[49:03] stage hand uh eval package that we
+[49:05] actually open source. So we perform um
+[49:08] neutral evaluations across different
+[49:10] model providers, different harnesses uh
+[49:13] to basically test what the frontier of
+[49:17] uh model capabilities look like when it
+[49:18] comes to browser capabilities. And so
+[49:21] you can see here we evaluate um both on
+[49:24] our own internal benchmarks as well as
+[49:26] other well-known open source benchmarks
+[49:28] like online mind to web how different
+[49:30] models perform. And so you can see right
+[49:32] now 4.8 is top in the charts, but we
+[49:33] also have models from OpenAI, uh,
+[49:36] DeepMind and Google. Uh, and we are
+[49:38] continually, uh, you know, evaluating
+[49:40] these models in partnership with these
+[49:42] labs. Um, and helping to provide a
+[49:45] standard and a neutral evaluator of how
+[49:47] browser agents are actually performing
+[49:48] in the real world. And another big part
+[49:50] of what we do is also testing the
+[49:52] computer use capabilities of these
+[49:53] models. A lot of these models are um
+[49:57] uniquely well positioned to like the
+[49:59] problem of browser use is very similar
+[50:02] to the problem of computer use in that
+[50:05] you essentially are looking to uh look
+[50:08] at and screenshot, you know, parts of
+[50:10] the screen. You're looking to generate
+[50:13] uh outputs based on like coordinate
+[50:15] clicks or scrolls or drags, things that
+[50:17] you also need to do in a browser. Um and
+[50:20] they tend to increase accuracy quite a
+[50:22] bit. So, we also work with a lot of labs
+[50:23] to be able to test this. Um, and so
+[50:26] we're excited to do this with Anthropic.
+[50:27] It's been a great model for us. Um, and
+[50:30] you can see uh if you're interested in
+[50:32] trying to figure out what models are
+[50:34] best for browser capabilities. Um, we
+[50:37] would uh like this is a great place to
+[50:39] figure out what models are best for your
+[50:41] use cases. Um, and this is also an open
+[50:43] source package. Uh, Stage Hand is fully
+[50:46] open source. I'll pull that up now for
+[50:48] everyone to see. Uh so you can uh fork
+[50:51] it, you can you know see the
+[50:52] implementation um and it's a long-term
+[50:55] uh you know part of the ecosystem for us
+[50:57] to help support um you know builders who
+[51:00] are trying to build these automations
+[51:02] and browser agents to have the best
+[51:03] capabilities u as they go. So uh if
+[51:07] you're interested in all uh at you know
+[51:09] building browser agents or automating
+[51:11] things using the state-of-the-art models
+[51:14] uh stage hand is kind of the best way to
+[51:16] do so and browserbased is the best
+[51:18] infrastructure to run those models. Um
+[51:21] that's pretty much all from me. Um and
+[51:23] love to hand it back over to Amit.
+[51:30] >> Perfect. All right. Thanks guys. Um, you
+[51:34] know, that was that was really
+[51:35] impressive. So, uh, now we're going to
+[51:37] open it up for Q&A. Uh, we had some
+[51:40] questions, uh, coming in throughout the
+[51:42] whole presentation. Uh, so we'll walk
+[51:44] through those now. And if you haven't
+[51:46] submitted your your question yet,
+[51:47] please, uh, drop it in the Q&A tab. Um,
+[51:51] so I'm seeing a question here. How is
+[51:53] dynamic workflows different from uh, a
+[51:56] session spawning multiple parallel
+[51:58] agents today? Uh so I'll say that um
+[52:01] with sub agents today
+[52:03] claude orchestrates uh turn by turn
+[52:06] inside your conversation um and each of
+[52:09] those results will flow back into its
+[52:11] context. Uh but dynamic workflows will
+[52:15] move the plan into uh code. So cloud
+[52:19] will write uh an orchestration script
+[52:21] and it'll run uh that script in the
+[52:24] background. So that'll let the your one
+[52:26] session coordinate um hundreds of
+[52:29] parallel agents.
+[52:33] Um I'm seeing um another question here
+[52:36] and I think I'm going to throw this one
+[52:38] over to you Charles. Um as as memory
+[52:41] grows and more context gets carried in
+[52:43] each call, uh token usage and cost
+[52:46] climb. How is that managed or optimized?
+[52:51] >> Yeah. So I I think that's why the
+[52:54] concept of like memory or progressive
+[52:56] memory disclosure is very important
+[52:58] because I think what we've seen in
+[53:00] practice is that like the actual
+[53:03] the context windows that are available
+[53:05] they're not you know increasing
+[53:06] exponentially. I think a lot of people
+[53:08] even with 1 million context length
+[53:09] models still use them at like 200k for
+[53:11] performance reasons. So it means that
+[53:13] like if your agent is generating you
+[53:16] know more and more experience over time
+[53:18] and that's kind of growing unbounded but
+[53:20] then you have a bounded context window
+[53:22] one of the most important problems is
+[53:23] determining like what memories to place
+[53:25] into the context at any given point in
+[53:26] time because it's finite. Um so yeah the
+[53:30] way we think about this is very much
+[53:32] leaning on the agents to kind of
+[53:33] understand their own limitations and to
+[53:35] decide what goes into the system folder,
+[53:38] what goes out outside of the system
+[53:39] folder. Um, I think over time the amount
+[53:42] of memory in your system folder and if
+[53:44] you're using a lot of code, uh, it
+[53:46] should not really just grow unbounded.
+[53:48] It should be pretty capped. Um, versus
+[53:49] the amount of memory that's just stored
+[53:51] in git should kind of grow unbounded.
+[53:53] Um, and that's also why we have the
+[53:55] concept of like linking, right? Because
+[53:57] you need to your agent needs to know
+[53:58] what it doesn't know. So, it needs to
+[54:00] have links out from its context window
+[54:02] to external context living elsewhere.
+[54:06] >> Perfect. Um I'm seeing another question
+[54:08] here uh for Shay and and Schu. Um can
+[54:12] browserbased sessions resume after uh
+[54:15] agent crashes and also what's the
+[54:17] difference between browserbased and
+[54:18] stage hand?
+[54:22] >> SH do you want to take the first one?
+[54:24] >> Yeah. Uh it depends on why your agent
+[54:28] might crash, right? Um if the agent is
+[54:31] crashing because maybe uh the model is
+[54:34] hallucinating uh and sort of clicked on
+[54:36] a page that it shouldn't have. Yes. Uh
+[54:40] stage hand can help you sort of selfheal
+[54:42] in this these kind of scenarios. Uh and
+[54:45] like these models like Opus 48 are very
+[54:48] persistent at doing so. They'll try to
+[54:50] go back start from scratch and then
+[54:52] retry the workflow. Now if your sessions
+[54:54] are failing for some other reason where
+[54:56] you might be let's say running into a
+[54:58] capture or an antibbot or things like
+[55:00] that that's where you can sort of have
+[55:02] different strategies to retry your
+[55:05] workflows uh and uh try to heal from
+[55:08] there as well.
+[55:11] >> Yeah I can I can take the second
+[55:12] question. So the difference between
+[55:14] browserbased and stage hand is that
+[55:16] stage hand is an SDK to help you build
+[55:19] browser agents and build automations. uh
+[55:21] browser race is where you deploy and run
+[55:23] them. And so the distinction there is
+[55:26] that we provide you the tools open
+[55:28] source uh free and open source to be
+[55:31] able to build and iterate on these
+[55:32] agents. Um but and of course uh
+[55:36] essentially most of these automation
+[55:37] frameworks whether it's playright,
+[55:39] puppeteer or selenium are all
+[55:40] communicating over what's called CDP
+[55:42] which is the chrome dev tools protocol.
+[55:44] It's how you can connect and interact
+[55:46] with any chromium based browser. Uh and
+[55:48] so we also are support and host these
+[55:52] remote Chromium uh headless browsers and
+[55:54] so we are a provider of that. Um and of
+[55:57] course we optimize and give you a lot of
+[56:00] additional benefits when using stage
+[56:02] hand on browserbase which is better
+[56:04] observability uh in those live views
+[56:06] that I was showing you. Um improved uh
+[56:09] ability to cache your runs so that if
+[56:12] you are uh finding a selector on a page
+[56:15] and the page hasn't changed uh stage
+[56:17] will automatically cache that if you
+[56:19] connect and use it on browserbase. Um
+[56:22] and then of course just additional
+[56:23] benefits in that the ecosystem is very
+[56:25] tight. So you can use a lot of
+[56:26] browserbased features really well
+[56:28] through the stage hand package. But
+[56:29] browserbase itself uh is framework
+[56:31] agnostic. You can connect to it um and
+[56:33] connect to our browsers and services
+[56:35] using any browser automation framework
+[56:37] of your choice. And customers do use
+[56:38] different frameworks but I would say
+[56:40] stage hand is the most popular.
+[56:43] >> Perfect.
+[56:44] >> Um I'm seeing one here for for you
+[56:47] Charles. Uh what's the standard
+[56:49] structure for uh memories uh saved by
+[56:53] letter?
+[56:55] Yeah. So today we encourage the agents
+[56:58] to write markdown files. Um and markdown
+[57:01] files as in you know the there's like
+[57:04] preamble to them. So they have kind of
+[57:06] like a header that has like the name of
+[57:07] or I think it's like the description of
+[57:09] the file which allows progressive
+[57:10] disclosure because we can load the
+[57:12] description into the system prompt. So
+[57:14] the agent kind of knows what the memory
+[57:15] is about without loading the entire
+[57:17] memory and the agent wants to see the
+[57:18] whole memory can like read using bash or
+[57:20] the read tool in the harness. Um yeah so
+[57:23] it's we we do markdown um but at the end
+[57:27] of the day markdown is just bytes right
+[57:29] there you know any you can track any
+[57:31] sort of data or bytes on in git so I
+[57:33] think we definitely expect over time as
+[57:35] the models get more and more powerful
+[57:37] and understand better how to like use
+[57:38] and manage their own memory they will
+[57:40] probably you at some point no longer
+[57:42] really be using markdown but using
+[57:43] something more expressive maybe even
+[57:44] HTML right I remember that anthropic
+[57:47] blog post
+[57:49] >> yeah perfect um I see a question uh in
+[57:54] the chat about prompting changes with
+[57:57] 4.8 coming from 4.7. Uh the one thing I
+[58:01] guess I'll really try to emphasize here
+[58:03] is the prompting changes should be
+[58:05] relatively the same. Uh but you might
+[58:07] want to really experiment with your
+[58:08] effort levels. Um as I mentioned
+[58:10] earlier, the default um on 4.8 uh did
+[58:14] change compared to 4.7. So that could
+[58:16] affect the quality um of your outputs.
+[58:19] So I would try experimenting with that
+[58:22] uh moving forward.
+[58:25] Um and then also just like as a good
+[58:27] side note uh for everybody um you know
+[58:29] this session is recorded so we'll
+[58:31] distribute that shortly. Um and then
+[58:34] also please make sure to fill out the
+[58:36] brief survey that we've sent out. Um
+[58:39] it's really important to help make sure
+[58:40] that we can uh give out more uh webinars
+[58:44] just like this uh in the future.
+[58:51] All right, I think you know I think
+[58:53] that's about time here uh for us. We
+[58:56] have about uh like a minute left. So I
+[58:58] just wanted to say you know thanks
+[59:00] everybody for joining us today. Um you
+[59:03] know and thank you to Charles Shay and
+[59:05] Shu for all the demos and walking us
+[59:08] through uh browserbased Leta uh and how
+[59:12] you guys have been working with Opus 4.8
+[59:14] 8. And uh I just wanted to say, you
+[59:16] know, thanks so much for the audience
+[59:18] for tuning in and for listening uh to us
+[59:21] talk about Opus. And I'm really excited
+[59:23] to uh see you guys in the next webinar.
+[59:28] Perfect. So take care everybody. Thanks.
+[59:30] >> Thank you.
