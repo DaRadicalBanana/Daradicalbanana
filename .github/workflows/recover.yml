@@ -1,0 +1,59 @@
+name: Recover Transcript Artifact
+
+on:
+  push:
+    branches: [ "claude/video-transcript-extraction-jlAit" ]
+    paths:
+      - ".github/workflows/recover.yml"
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: recover-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download transcript artifact from the run that produced it
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          mkdir -p transcripts
+          # Artifact 7450203183 was produced by run 27049446864 (1580-line transcript)
+          curl -sSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -o art.zip \
+            "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/7450203183/zip"
+          file art.zip || true
+          unzip -o art.zip -d transcripts
+          rm -f art.zip
+          echo "==== recovered files ===="
+          ls -la transcripts
+          echo "==== preview ===="
+          head -40 transcripts/*.txt || true
+
+      - name: Commit recovered transcript
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          BRANCH=claude/video-transcript-extraction-jlAit
+          git add transcripts/
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+            exit 0
+          fi
+          git commit -m "Recover transcript for gTr3J33kQLA from artifact [skip ci]"
+          for i in 1 2 3 4 5 6; do
+            git fetch origin "$BRANCH" || true
+            git rebase "origin/$BRANCH" -X ours || git rebase --abort || true
+            if git push origin "HEAD:$BRANCH"; then echo "pushed"; break; fi
+            sleep $((RANDOM % 5 + 2))
+          done
