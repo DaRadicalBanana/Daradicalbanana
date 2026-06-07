@@ -68,8 +68,12 @@ def via_transcript_api(vid: str) -> bool:
 
 # --- Strategy 2: yt-dlp subtitles -------------------------------------------
 def via_ytdlp(vid: str) -> bool:
+    import shutil
     url = f"https://www.youtube.com/watch?v={vid}"
-    clients = ["default", "web,mweb,android_vr,tv", "android_vr,ios,web"]
+    # A JS runtime lets yt-dlp use the web/tv clients (nsig); without one it falls
+    # back to android_vr, which many videos now reject as "This video is not available".
+    js_runtime = next((r for r in ("deno", "node") if shutil.which(r)), None)
+    clients = ["default", "web,mweb,tv", "android_vr,ios,web"]
     for client in clients:
         cmd = [
             sys.executable, "-m", "yt_dlp", "--skip-download",
@@ -77,6 +81,8 @@ def via_ytdlp(vid: str) -> bool:
             "--sub-format", "json3/vtt/srv1", "--convert-subs", "srt",
             "-o", os.path.join(OUT_DIR, "%(id)s.%(ext)s"), url,
         ]
+        if js_runtime:
+            cmd[3:3] = ["--js-runtimes", js_runtime]
         if client != "default":
             cmd[3:3] = ["--extractor-args", f"youtube:player_client={client}"]
         os.makedirs(OUT_DIR, exist_ok=True)
