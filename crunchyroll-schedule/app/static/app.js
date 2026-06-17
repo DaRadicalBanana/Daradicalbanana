@@ -69,8 +69,10 @@ function render(data) {
     const eps = (data.days && data.days[wd]) || [];
     const col = document.createElement("div");
     col.className = "day";
-    col.innerHTML =
-      `<h2>${DAYS[wd]}</h2>` + eps.map((e) => epCard(e, data.timezone)).join("");
+    const body = eps.length
+      ? eps.map((e) => epCard(e, data.timezone)).join("")
+      : `<div class="empty">No releases</div>`;
+    col.innerHTML = `<h2>${DAYS[wd]}</h2>` + body;
     cal.appendChild(col);
   }
 }

@@ -2,3 +2,4 @@ fastapi>=0.110
 uvicorn[standard]>=0.29
 httpx>=0.27
 python-dotenv>=1.0
+qrcode>=7.4          # optional: QR code for opening the app on your phone

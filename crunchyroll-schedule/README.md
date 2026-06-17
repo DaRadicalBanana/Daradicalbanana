@@ -37,6 +37,28 @@ full weekly calendar from sample data (clearly banner-labelled "SAMPLE DATA"),
 exercising the real pipeline — CR filtering, sub→raw fallback flags, last/next,
 multi-episode drops, delays. Force it on/off with `APP_DEMO=1` / `APP_DEMO=0`.
 
+## Open it on your phone
+
+Run this on your computer (e.g. your Mac) with your phone on the **same Wi-Fi**:
+
+```bash
+cd crunchyroll-schedule
+pip install -r requirements.txt
+python scripts/serve.py
+```
+
+It prints a URL like `http://192.168.1.42:8000` **and a scannable QR code** —
+point your phone camera at it and tap the link. The UI is fully responsive
+(single-column agenda on phones) and you can "Add to Home Screen" for an app-like
+icon (it ships a web manifest + iOS meta tags).
+
+- First run, macOS may ask to *allow incoming connections* — click **Allow**.
+- Different port: `PORT=9000 python scripts/serve.py`.
+- **Off your home Wi-Fi?** Plain LAN won't reach it. Run a quick tunnel instead:
+  install `cloudflared` and `cloudflared tunnel --url http://localhost:8000` —
+  it prints a public `https://…trycloudflare.com` URL you can open anywhere (no
+  account needed). Use sparingly; it's a public URL while running.
+
 ### Going live
 
 ```bash

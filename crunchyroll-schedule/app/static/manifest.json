@@ -1,0 +1,11 @@
+{
+  "name": "Crunchyroll Weekly Schedule",
+  "short_name": "CR Schedule",
+  "description": "Weekly Crunchyroll episode release schedule in your local time.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f1116",
+  "theme_color": "#0f1116",
+  "icons": []
+}
