@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crunchyroll Weekly Schedule</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <h1>Crunchyroll Weekly Schedule</h1>
+    <div class="controls">
+      <button id="prev">&larr; Prev</button>
+      <span id="weeklabel">Loading…</span>
+      <button id="next">Next &rarr;</button>
+    </div>
+    <div id="freshness" class="freshness"></div>
+    <div id="warnings" class="warnings"></div>
+  </header>
+  <main id="calendar" class="calendar"></main>
+  <footer>
+    <p>
+      Times shown in <strong id="tz"></strong>. Future episodes are
+      <em>projections</em> and may change. Episodes flagged
+      <span class="badge jp">JP broadcast time</span> have an unconfirmed
+      Crunchyroll sub time. Timing data: AnimeSchedule.net · metadata: AniList.
+    </p>
+  </footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>
