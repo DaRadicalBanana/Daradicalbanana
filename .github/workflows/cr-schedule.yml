@@ -1,0 +1,40 @@
+name: CR Schedule tests
+
+on:
+  push:
+    branches: [ "claude/anime-release-schedule-xzwrr7" ]
+    paths:
+      - "crunchyroll-schedule/**"
+      - ".github/workflows/cr-schedule.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cr-schedule-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: crunchyroll-schedule
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+
+      - name: Run tests
+        run: pytest -q
+
+      - name: Import / app boot smoke check
+        run: python -c "from app.main import app; print('app imports OK')"

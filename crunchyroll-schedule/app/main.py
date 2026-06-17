@@ -43,7 +43,9 @@ async def schedule(
         iw = current_iso_week(settings.timezone)
         year, week = iw.year, iw.week
     data = await _service.weekly(year, week)
-    return JSONResponse(to_jsonable(data))
+    # Short client cache so a phone refreshing / re-focusing doesn't hammer the
+    # backend; the app also auto-refreshes every 5 min.
+    return JSONResponse(to_jsonable(data), headers={"Cache-Control": "private, max-age=60"})
 
 
 @app.get("/")
