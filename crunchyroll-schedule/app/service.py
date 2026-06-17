@@ -22,6 +22,7 @@ from .cache import FileCache
 from .clients.anilist import AniListClient, crunchyroll_url
 from .clients.animeschedule import AnimeScheduleClient
 from .config import Settings
+from .isoweek import current_iso_week
 from .models import (
     EpisodeRelease,
     Freshness,
@@ -92,6 +93,8 @@ class ScheduleService:
     async def weekly(self, year: int, week: int) -> WeeklySchedule:
         tz = self.settings.timezone
         result = WeeklySchedule(iso_year=year, iso_week=week, timezone=tz)
+        cw = current_iso_week(tz)
+        result.is_current_week = (cw.year == year and cw.week == week)
 
         if self.settings.demo_mode:
             return self._demo_weekly(result)

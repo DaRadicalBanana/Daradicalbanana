@@ -1,22 +1,60 @@
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const REFRESH_MS = 5 * 60 * 1000; // auto-refresh every 5 minutes
 let current = { year: null, week: null };
+let view = localStorage.getItem("view") || "week";
+let lastData = null;
+let refreshTimer = null;
 
 async function load(year, week) {
   const qs = year && week ? `?year=${year}&week=${week}` : "";
-  const res = await fetch(`/api/schedule${qs}`);
-  const data = await res.json();
-  render(data);
+  setStatus("Loading…");
+  try {
+    const res = await fetch(`/api/schedule${qs}`, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    lastData = data;
+    setStatus("");
+    render(data);
+  } catch (err) {
+    setStatus(`Couldn't load schedule (${err.message}). Retrying on refresh.`, true);
+  }
 }
 
+function setStatus(msg, isError) {
+  const el = document.getElementById("status");
+  el.textContent = msg;
+  el.classList.toggle("error", !!isError);
+  el.hidden = !msg;
+}
+
+// ---- time helpers ----
 function fmtTime(iso, tz) {
   if (!iso) return "TBA";
-  const d = new Date(iso);
-  return d.toLocaleString("en-US", {
-    timeZone: tz,
-    weekday: "short",
-    hour: "numeric",
-    minute: "2-digit",
+  return new Date(iso).toLocaleString("en-US", {
+    timeZone: tz, weekday: "short", hour: "numeric", minute: "2-digit",
   });
+}
+
+function relative(iso) {
+  if (!iso) return "";
+  const diff = new Date(iso).getTime() - Date.now();
+  const past = diff < 0;
+  const s = Math.abs(diff) / 1000;
+  const mins = Math.round(s / 60), hrs = Math.round(s / 3600), days = Math.round(s / 86400);
+  let txt;
+  if (s < 90) txt = "just now";
+  else if (mins < 90) txt = `${mins} min`;
+  else if (hrs < 36) txt = `${hrs} hr`;
+  else txt = `${days} day${days === 1 ? "" : "s"}`;
+  if (txt === "just now") return txt;
+  return past ? `${txt} ago` : `in ${txt}`;
+}
+
+// today (in the data's tz) as {iso_week_year, week, weekday}
+function localTodayParts(tz) {
+  const now = new Date();
+  const wd = (new Date(now.toLocaleString("en-US", { timeZone: tz })).getDay() + 6) % 7; // Mon=0
+  return { weekday: wd };
 }
 
 function badge(conf) {
@@ -27,64 +65,120 @@ function badge(conf) {
   return "";
 }
 
-function epCard(ep, tz) {
-  const num = ep.subtracted_episode_number
+function epNum(ep) {
+  return ep.subtracted_episode_number
     ? `${ep.subtracted_episode_number}–${ep.episode_number}`
     : ep.episode_number ?? "?";
-  const link = ep.streams?.crunchyroll
+}
+
+function watchLink(ep) {
+  return ep.streams?.crunchyroll
     ? `<a href="${ep.streams.crunchyroll}" target="_blank" rel="noopener">watch ↗</a>`
     : "";
-  return `<div class="ep">
+}
+
+function epCard(ep, tz) {
+  const past = ep.air_at && new Date(ep.air_at).getTime() < Date.now();
+  return `<div class="ep ${past ? "past" : "upcoming"}">
     <div class="meta">
       <div class="title">${escapeHtml(ep.title)}</div>
-      <div>Ep ${num} · <span class="time">${fmtTime(ep.air_at, tz)}</span></div>
-      <div>${badge(ep.confidence)} ${link}</div>
+      <div>Ep ${epNum(ep)} · <span class="time">${fmtTime(ep.air_at, tz)}</span></div>
+      <div class="rel">${relative(ep.air_at)}</div>
+      <div>${badge(ep.confidence)} ${watchLink(ep)}</div>
     </div>
   </div>`;
+}
+
+// ---- views ----
+function renderWeek(data) {
+  const cal = document.getElementById("calendar");
+  cal.innerHTML = "";
+  const isCurrentWeek = data.is_current_week;
+  const today = localTodayParts(data.timezone).weekday;
+  for (let wd = 0; wd < 7; wd++) {
+    const eps = (data.days && data.days[wd]) || [];
+    const col = document.createElement("div");
+    col.className = "day" + (isCurrentWeek && wd === today ? " today" : "");
+    const body = eps.length
+      ? eps.map((e) => epCard(e, data.timezone)).join("")
+      : `<div class="empty">No releases</div>`;
+    col.innerHTML = `<h2>${DAYS[wd]}${isCurrentWeek && wd === today ? " · Today" : ""}</h2>` + body;
+    cal.appendChild(col);
+  }
+}
+
+function showRow(show, tz) {
+  const cover = show.cover_image_url
+    ? `<img src="${show.cover_image_url}" alt="" loading="lazy" />`
+    : `<div class="noart"></div>`;
+  const last = show.last_released
+    ? `<div class="slot"><span class="lbl">Last</span> Ep ${epNum(show.last_released)} ·
+        <span class="time">${fmtTime(show.last_released.air_at, tz)}</span>
+        <span class="rel">(${relative(show.last_released.air_at)})</span></div>`
+    : `<div class="slot muted">No released episode this week</div>`;
+  const next = show.next_scheduled
+    ? `<div class="slot next"><span class="lbl">Next</span> Ep ${epNum(show.next_scheduled)} ·
+        <span class="time">${fmtTime(show.next_scheduled.air_at, tz)}</span>
+        <span class="rel">(${relative(show.next_scheduled.air_at)})</span>
+        ${badge(show.next_scheduled.confidence)}</div>`
+    : `<div class="slot muted">No upcoming episode this week</div>`;
+  return `<div class="show">
+    ${cover}
+    <div class="info">
+      <div class="title">${escapeHtml(show.title)} ${watchLink(show.next_scheduled || show.last_released || {})}</div>
+      ${last}${next}
+    </div>
+  </div>`;
+}
+
+function renderShows(data) {
+  const el = document.getElementById("showlist");
+  const shows = (data.shows || []).slice().sort((a, b) => {
+    const an = a.next_scheduled?.air_at, bn = b.next_scheduled?.air_at;
+    if (an && bn) return new Date(an) - new Date(bn);
+    if (an) return -1;
+    if (bn) return 1;
+    return a.title.localeCompare(b.title);
+  });
+  el.innerHTML = shows.length
+    ? shows.map((s) => showRow(s, data.timezone)).join("")
+    : `<div class="empty">No Crunchyroll shows this week.</div>`;
+}
+
+function applyView() {
+  document.getElementById("calendar").hidden = view !== "week";
+  document.getElementById("showlist").hidden = view !== "shows";
+  document.getElementById("view-week").classList.toggle("active", view === "week");
+  document.getElementById("view-shows").classList.toggle("active", view === "shows");
 }
 
 function render(data) {
   current = { year: data.iso_year, week: data.iso_week };
   document.getElementById("weeklabel").textContent =
-    `${data.iso_year} · ISO week ${data.iso_week}`;
+    `${data.iso_year} · ISO week ${data.iso_week}` + (data.is_current_week ? " · this week" : "");
   document.getElementById("tz").textContent = data.timezone;
 
   const isSample = (data.freshness || []).some((f) => f.source === "sample");
   document.getElementById("samplebanner").hidden = !isSample;
 
   const fresh = (data.freshness || [])
-    .map((f) => {
-      const when = f.fetched_at ? new Date(f.fetched_at).toLocaleString("en-US", { timeZone: data.timezone }) : "never";
-      return `${f.source}: ${when}${f.stale ? " (stale)" : ""}`;
-    })
+    .map((f) => `${f.source} ${f.fetched_at ? relative(f.fetched_at) : "never"}${f.stale ? " (stale)" : ""}`)
     .join(" · ");
-  document.getElementById("freshness").textContent = `Data freshness — ${fresh}`;
+  document.getElementById("freshness").textContent = fresh ? `Updated ${fresh}` : "";
   document.getElementById("warnings").innerHTML = (data.warnings || [])
-    .map((w) => `⚠ ${escapeHtml(w)}`)
-    .join("<br>");
+    .map((w) => `⚠ ${escapeHtml(w)}`).join("<br>");
 
-  const cal = document.getElementById("calendar");
-  cal.innerHTML = "";
-  for (let wd = 0; wd < 7; wd++) {
-    const eps = (data.days && data.days[wd]) || [];
-    const col = document.createElement("div");
-    col.className = "day";
-    const body = eps.length
-      ? eps.map((e) => epCard(e, data.timezone)).join("")
-      : `<div class="empty">No releases</div>`;
-    col.innerHTML = `<h2>${DAYS[wd]}</h2>` + body;
-    cal.appendChild(col);
-  }
+  renderWeek(data);
+  renderShows(data);
+  applyView();
 }
 
 function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
-  );
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
 function shiftWeek(delta) {
-  // Naive ISO week stepping; server normalizes anything out of range.
   let { year, week } = current;
   week += delta;
   if (week < 1) { year -= 1; week = 52; }
@@ -92,6 +186,32 @@ function shiftWeek(delta) {
   load(year, week);
 }
 
+function setView(v) {
+  view = v;
+  localStorage.setItem("view", v);
+  applyView();
+  if (lastData) render(lastData); // refresh relative times
+}
+
 document.getElementById("prev").addEventListener("click", () => shiftWeek(-1));
 document.getElementById("next").addEventListener("click", () => shiftWeek(1));
-load();
+document.getElementById("today").addEventListener("click", () => load());
+document.getElementById("view-week").addEventListener("click", () => setView("week"));
+document.getElementById("view-shows").addEventListener("click", () => setView("shows"));
+
+// re-render relative times every minute without refetching
+setInterval(() => { if (lastData) render(lastData); }, 60 * 1000);
+// auto-refresh data periodically and on tab focus
+function scheduleRefresh() {
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(() => load(current.year, current.week), REFRESH_MS);
+}
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) load(current.year, current.week);
+});
+
+(async function init() {
+  applyView();
+  await load();
+  setInterval(scheduleRefresh, REFRESH_MS);
+})();

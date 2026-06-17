@@ -21,14 +21,23 @@
   <header>
     <h1>Crunchyroll Weekly Schedule</h1>
     <div class="controls">
-      <button id="prev">&larr; Prev</button>
+      <button id="prev" aria-label="Previous week">&larr;</button>
+      <button id="today" class="today-btn">Today</button>
       <span id="weeklabel">Loading…</span>
-      <button id="next">Next &rarr;</button>
+      <button id="next" aria-label="Next week">&rarr;</button>
     </div>
+    <div class="viewtoggle" role="tablist" aria-label="View">
+      <button id="view-week" class="active" role="tab">Week</button>
+      <button id="view-shows" role="tab">Shows</button>
+    </div>
+    <div id="status" class="status"></div>
     <div id="freshness" class="freshness"></div>
     <div id="warnings" class="warnings"></div>
   </header>
-  <main id="calendar" class="calendar"></main>
+  <main>
+    <section id="calendar" class="calendar"></section>
+    <section id="showlist" class="showlist" hidden></section>
+  </main>
   <footer>
     <p>
       Times shown in <strong id="tz"></strong>. Future episodes are
