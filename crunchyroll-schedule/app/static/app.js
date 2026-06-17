@@ -5,6 +5,22 @@ let view = localStorage.getItem("view") || "week";
 let lastData = null;
 let refreshTimer = null;
 
+// ---- favorites (persisted) ----
+let favorites = new Set(JSON.parse(localStorage.getItem("favorites") || "[]"));
+let search = "";
+let favOnly = localStorage.getItem("favonly") === "1";
+
+function isFav(route) { return favorites.has(route); }
+function toggleFav(route) {
+  if (favorites.has(route)) favorites.delete(route); else favorites.add(route);
+  localStorage.setItem("favorites", JSON.stringify([...favorites]));
+  if (lastData) render(lastData);
+}
+function calendarHref() {
+  const favs = [...favorites];
+  return favs.length ? `/api/calendar.ics?routes=${encodeURIComponent(favs.join(","))}` : "/api/calendar.ics";
+}
+
 async function load(year, week) {
   const qs = year && week ? `?year=${year}&week=${week}` : "";
   setStatus("Loading…");
@@ -108,6 +124,9 @@ function renderWeek(data) {
 }
 
 function showRow(show, tz) {
+  const fav = isFav(show.route);
+  const star = `<button class="fav ${fav ? "on" : ""}" data-route="${escapeHtml(show.route)}"
+    aria-pressed="${fav}" title="${fav ? "Unfavorite" : "Favorite"}">${fav ? "★" : "☆"}</button>`;
   const cover = show.cover_image_url
     ? `<img src="${show.cover_image_url}" alt="" loading="lazy" />`
     : `<div class="noart"></div>`;
@@ -125,7 +144,7 @@ function showRow(show, tz) {
   return `<div class="show">
     ${cover}
     <div class="info">
-      <div class="title">${escapeHtml(show.title)} ${watchLink(show.next_scheduled || show.last_released || {})}</div>
+      <div class="title">${star} ${escapeHtml(show.title)} ${watchLink(show.next_scheduled || show.last_released || {})}</div>
       ${last}${next}
     </div>
   </div>`;
@@ -133,7 +152,13 @@ function showRow(show, tz) {
 
 function renderShows(data) {
   const el = document.getElementById("showlist");
-  const shows = (data.shows || []).slice().sort((a, b) => {
+  let shows = (data.shows || []).slice();
+  if (favOnly) shows = shows.filter((s) => isFav(s.route));
+  if (search) {
+    const q = search.toLowerCase();
+    shows = shows.filter((s) => s.title.toLowerCase().includes(q));
+  }
+  shows.sort((a, b) => {
     const an = a.next_scheduled?.air_at, bn = b.next_scheduled?.air_at;
     if (an && bn) return new Date(an) - new Date(bn);
     if (an) return -1;
@@ -148,6 +173,7 @@ function renderShows(data) {
 function applyView() {
   document.getElementById("calendar").hidden = view !== "week";
   document.getElementById("showlist").hidden = view !== "shows";
+  document.getElementById("showcontrols").hidden = view !== "shows";
   document.getElementById("view-week").classList.toggle("active", view === "week");
   document.getElementById("view-shows").classList.toggle("active", view === "shows");
 }
@@ -168,6 +194,7 @@ function render(data) {
   document.getElementById("warnings").innerHTML = (data.warnings || [])
     .map((w) => `⚠ ${escapeHtml(w)}`).join("<br>");
 
+  document.getElementById("callink").href = calendarHref();
   renderWeek(data);
   renderShows(data);
   applyView();
@@ -198,6 +225,24 @@ document.getElementById("next").addEventListener("click", () => shiftWeek(1));
 document.getElementById("today").addEventListener("click", () => load());
 document.getElementById("view-week").addEventListener("click", () => setView("week"));
 document.getElementById("view-shows").addEventListener("click", () => setView("shows"));
+
+// search + favorites
+document.getElementById("search").addEventListener("input", (e) => {
+  search = e.target.value.trim();
+  if (lastData) renderShows(lastData);
+});
+const favOnlyEl = document.getElementById("favonly");
+favOnlyEl.checked = favOnly;
+favOnlyEl.addEventListener("change", (e) => {
+  favOnly = e.target.checked;
+  localStorage.setItem("favonly", favOnly ? "1" : "0");
+  if (lastData) renderShows(lastData);
+});
+// star toggles (event delegation)
+document.getElementById("showlist").addEventListener("click", (e) => {
+  const btn = e.target.closest(".fav");
+  if (btn) toggleFav(btn.dataset.route);
+});
 
 // re-render relative times every minute without refetching
 setInterval(() => { if (lastData) render(lastData); }, 60 * 1000);

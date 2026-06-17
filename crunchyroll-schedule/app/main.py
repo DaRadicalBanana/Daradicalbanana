@@ -50,12 +50,17 @@ async def schedule(
 
 
 @app.get("/api/calendar.ics")
-async def calendar_ics() -> Response:
+async def calendar_ics(routes: str | None = Query(default=None)) -> Response:
     """iCalendar feed of each show's next episode — subscribe in your phone's
-    calendar (use the http(s) URL as a subscription/'webcal' feed)."""
+    calendar (use the http(s) URL as a subscription/'webcal' feed).
+
+    Optional `routes` (comma-separated show routes) limits the feed, e.g. to your
+    favorites.
+    """
     iw = current_iso_week(settings.timezone)
     data = await _service.weekly(iw.year, iw.week)
-    body = build_ics(data)
+    route_filter = {r for r in routes.split(",") if r} if routes else None
+    body = build_ics(data, routes=route_filter)
     return Response(
         content=body,
         media_type="text/calendar; charset=utf-8",

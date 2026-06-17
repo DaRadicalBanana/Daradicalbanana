@@ -34,13 +34,17 @@
     <div id="freshness" class="freshness"></div>
     <div id="warnings" class="warnings"></div>
   </header>
+  <div id="showcontrols" class="showcontrols" hidden>
+    <input id="search" type="search" placeholder="Filter shows…" aria-label="Filter shows" />
+    <label class="favonly"><input id="favonly" type="checkbox" /> ★ Favorites only</label>
+  </div>
   <main>
     <section id="calendar" class="calendar"></section>
     <section id="showlist" class="showlist" hidden></section>
   </main>
   <footer>
     <p class="calsub">
-      📅 <a href="/api/calendar.ics">Subscribe to next-episode calendar</a>
+      📅 <a id="callink" href="/api/calendar.ics">Subscribe to next-episode calendar</a>
       — add this URL to your phone's calendar to get each show's next episode.
     </p>
     <p>

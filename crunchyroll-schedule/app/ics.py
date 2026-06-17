@@ -77,7 +77,12 @@ def _event(ep: EpisodeRelease, title: str, url: str | None) -> list[str]:
     return lines
 
 
-def build_ics(schedule: WeeklySchedule, calname: str = "Crunchyroll Schedule") -> str:
+def build_ics(
+    schedule: WeeklySchedule,
+    calname: str = "Crunchyroll Schedule",
+    routes: set[str] | None = None,
+) -> str:
+    """Build the feed. If `routes` is given, only those show routes are included."""
     lines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
@@ -88,6 +93,8 @@ def build_ics(schedule: WeeklySchedule, calname: str = "Crunchyroll Schedule") -
         "X-WR-TIMEZONE:UTC",
     ]
     for show in schedule.shows:
+        if routes is not None and show.route not in routes:
+            continue
         ep = show.next_scheduled
         if not ep or not ep.air_at:
             continue

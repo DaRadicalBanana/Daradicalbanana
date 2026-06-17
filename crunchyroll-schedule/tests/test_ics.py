@@ -54,3 +54,14 @@ def test_ics_escapes_special_chars():
     ep = _ep()
     ics = build_ics(_schedule_with(ep, title="Re:Zero; Season, 3"))
     assert "Re:Zero\\; Season\\, 3" in ics
+
+
+def test_ics_routes_filter():
+    sched = WeeklySchedule(iso_year=2026, iso_week=27, timezone="America/New_York")
+    sched.shows = [
+        Show(route="keep", title="Keep", next_scheduled=_ep()),
+        Show(route="drop", title="Drop", next_scheduled=_ep()),
+    ]
+    ics = build_ics(sched, routes={"keep"})
+    assert "SUMMARY:Keep" in ics
+    assert "SUMMARY:Drop" not in ics
