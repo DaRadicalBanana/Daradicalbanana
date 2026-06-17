@@ -59,15 +59,23 @@ def _entry(monday: date, title, route, wd, hour, minute, ep_no, streams, episode
     return base
 
 
+# Anchor week: episode numbers in _SHOWS are "as of" this ISO week; other weeks
+# increment/decrement so a multi-week window shows realistic last/next episodes.
+_ANCHOR_WEEK = 27
+
+
 def build_demo_timetables(year: int, week: int):
     """Return (sub_entries, raw_entries) as lists of PascalCase dicts."""
     monday = date.fromisocalendar(year, week, 1)
+    delta = week - _ANCHOR_WEEK
     sub: list[dict] = []
     raw: list[dict] = []
     for (title, route, wd, hour, minute, ep_no, streams, fallback, sub_off, subtracted, delayed) in _SHOWS:
+        eff_ep = max(1, ep_no + delta)
+        eff_sub = (max(1, subtracted + delta) if subtracted is not None else None)
         day = monday + timedelta(days=wd)
         raw_dt = datetime.combine(day, time(hour, minute), tzinfo=timezone.utc)
         sub_dt = raw_dt if fallback else raw_dt + timedelta(minutes=sub_off)
-        raw.append(_entry(monday, title, route, wd, hour, minute, ep_no, streams, raw_dt, subtracted=subtracted, delayed=delayed, air_type="raw"))
-        sub.append(_entry(monday, title, route, wd, hour, minute, ep_no, streams, sub_dt, subtracted=subtracted, delayed=delayed, air_type="sub"))
+        raw.append(_entry(monday, title, route, wd, hour, minute, eff_ep, streams, raw_dt, subtracted=eff_sub, delayed=delayed, air_type="raw"))
+        sub.append(_entry(monday, title, route, wd, hour, minute, eff_ep, streams, sub_dt, subtracted=eff_sub, delayed=delayed, air_type="sub"))
     return sub, raw

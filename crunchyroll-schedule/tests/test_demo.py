@@ -66,3 +66,23 @@ def test_demo_anchored_to_requested_week(tmp_path):
     a = {e["Route"]: e["EpisodeDate"] for e in sub_a}
     b = {e["Route"]: e["EpisodeDate"] for e in sub_b}
     assert a["aetherbound-chronicle"] != b["aetherbound-chronicle"]
+
+
+def test_demo_episode_numbers_increment_across_weeks():
+    sub_27, _ = build_demo_timetables(2026, 27)
+    sub_28, _ = build_demo_timetables(2026, 28)
+    e27 = next(e for e in sub_27 if e["Route"] == "aetherbound-chronicle")["EpisodeNumber"]
+    e28 = next(e for e in sub_28 if e["Route"] == "aetherbound-chronicle")["EpisodeNumber"]
+    assert e28 == e27 + 1
+
+
+def test_shows_window_gives_last_and_next(tmp_path):
+    # In demo mode the window spans w-1..w+2, so a show should be able to show
+    # both a last-released and a next-scheduled episode.
+    svc = ScheduleService(_demo_settings(tmp_path))
+    cw = __import__("app.isoweek", fromlist=["current_iso_week"]).current_iso_week("America/New_York")
+    result = asyncio.run(svc.weekly(cw.year, cw.week))
+    have_both = [s for s in result.shows if s.last_released and s.next_scheduled]
+    assert have_both, "window aggregation should yield shows with both last & next"
+    s = have_both[0]
+    assert s.last_released.air_at < s.next_scheduled.air_at

@@ -34,3 +34,17 @@ def current_iso_week(tz: str) -> IsoWeek:
 
 def iso_week_of(year: int, month: int, day: int) -> IsoWeek:
     return iso_week_for(date(year, month, day))
+
+
+def week_offset(year: int, week: int, delta: int) -> IsoWeek:
+    """The ISO week `delta` weeks away, computed via dates so year boundaries
+    (and 52/53-week years) are handled correctly."""
+    from datetime import timedelta
+
+    monday = date.fromisocalendar(year, week, 1) + timedelta(weeks=delta)
+    return iso_week_for(monday)
+
+
+def week_window(year: int, week: int, before: int, after: int) -> list[IsoWeek]:
+    """Weeks from `before` weeks back through `after` weeks ahead (inclusive)."""
+    return [week_offset(year, week, d) for d in range(-before, after + 1)]

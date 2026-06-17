@@ -22,7 +22,7 @@ from .cache import FileCache
 from .clients.anilist import AniListClient, crunchyroll_url
 from .clients.animeschedule import AnimeScheduleClient
 from .config import Settings
-from .isoweek import current_iso_week
+from .isoweek import current_iso_week, week_window
 from .models import (
     EpisodeRelease,
     Freshness,
@@ -32,6 +32,11 @@ from .models import (
 )
 from .parsing import parse_dt, pick
 from .ratelimit import RateLimiter
+
+# How many weeks around the requested week to scan when computing each show's
+# last-released and next-scheduled episode for the Shows view.
+WINDOW_BEFORE = 1
+WINDOW_AFTER = 2
 
 
 def _normalize_entry(raw: dict) -> EpisodeRelease:
@@ -99,7 +104,7 @@ class ScheduleService:
         if self.settings.demo_mode:
             return self._demo_weekly(result)
 
-        # ---- AnimeSchedule sub + raw ----
+        # ---- AnimeSchedule sub + raw for the requested week (drives the grid) ----
         try:
             sub_raw, sub_meta = await self.animeschedule.timetable("sub", year, week, tz)
             raw_raw, _ = await self.animeschedule.timetable("raw", year, week, tz)
@@ -112,10 +117,24 @@ class ScheduleService:
                 return self._demo_weekly(result, reason="live data unavailable")
             return result
 
+        # ---- window weeks for the Shows view (last-released + next-scheduled) ----
+        window_pairs: list[tuple[list, list]] = []
+        for iw in week_window(year, week, WINDOW_BEFORE, WINDOW_AFTER):
+            if iw.year == year and iw.week == week:
+                window_pairs.append((sub_raw or [], raw_raw or []))
+                continue
+            try:
+                w_sub, _ = await self.animeschedule.timetable("sub", iw.year, iw.week, tz)
+                w_raw, _ = await self.animeschedule.timetable("raw", iw.year, iw.week, tz)
+                window_pairs.append((w_sub or [], w_raw or []))
+            except Exception:
+                continue  # a missing neighbour week just narrows last/next
+
         self._assemble(
             result,
             sub_raw or [],
             raw_raw or [],
+            window_pairs,
             source="animeschedule",
             fetched_at=sub_meta.fetched_at if sub_meta else None,
             stale=not (sub_meta.fresh if sub_meta else False),
@@ -125,38 +144,42 @@ class ScheduleService:
         await self._apply_anilist(result, year)
         return result
 
+    @staticmethod
+    def _classify_cr(sub_raw: list[dict], raw_raw: list[dict]) -> list[EpisodeRelease]:
+        """Normalize -> CR-filter -> attach sub/raw fallback confidence (pure)."""
+        raw_index = {}
+        for e in (_normalize_entry(x) for x in raw_raw):
+            raw_index[_key(e)] = e
+        cr = [e for e in (_normalize_entry(x) for x in sub_raw) if is_crunchyroll(e)]
+        for e in cr:
+            e.confidence = _classify(e, raw_index)
+        return cr
+
     def _assemble(
         self,
         result: WeeklySchedule,
         sub_raw: list[dict],
         raw_raw: list[dict],
+        window_pairs: list[tuple[list, list]],
         *,
         source: str,
         fetched_at,
         stale: bool,
     ) -> WeeklySchedule:
-        """Shared pipeline: normalize -> CR-filter -> classify -> group -> shows.
+        """Shared pipeline used by both live and demo paths.
 
-        Used by both the live path and demo mode so they behave identically.
+        The grid (`days`) reflects only the requested week; `shows` (last-released
+        + next-scheduled per show) aggregate across the whole window so each show
+        can show both a recent and an upcoming episode.
         """
         tz = result.timezone
-        sub_entries = [_normalize_entry(e) for e in sub_raw]
-        raw_entries = [_normalize_entry(e) for e in raw_raw]
-        raw_index = {_key(e): e for e in raw_entries}
-
-        cr_entries = [e for e in sub_entries if is_crunchyroll(e)]
-        for e in cr_entries:
-            e.confidence = _classify(e, raw_index)
+        week_entries = self._classify_cr(sub_raw, raw_raw)
 
         result.freshness.append(Freshness(fetched_at=fetched_at, source=source, stale=stale))
-        if any(e.confidence == TimeConfidence.JP_FALLBACK for e in cr_entries):
-            result.warnings.append(
-                "Some episodes show JP broadcast time (CR sub time unconfirmed)."
-            )
 
-        # ---- group into weekday buckets (local tz) ----
+        # ---- grid: weekday buckets (local tz), requested week only ----
         local = ZoneInfo(tz)
-        for e in cr_entries:
+        for e in week_entries:
             if e.air_at is None:
                 continue
             wd = e.air_at.astimezone(local).weekday()
@@ -164,19 +187,33 @@ class ScheduleService:
         for wd in result.days:
             result.days[wd].sort(key=lambda x: x.air_at or datetime.max.replace(tzinfo=timezone.utc))
 
-        # ---- per-show last/next ----
-        result.shows = self._build_shows(cr_entries)
+        # ---- shows: aggregate the window ----
+        window_entries: list[EpisodeRelease] = []
+        for w_sub, w_raw in (window_pairs or [(sub_raw, raw_raw)]):
+            window_entries.extend(self._classify_cr(w_sub, w_raw))
+        result.shows = self._build_shows(window_entries)
+
+        if any(e.confidence == TimeConfidence.JP_FALLBACK for e in window_entries):
+            result.warnings.append(
+                "Some episodes show JP broadcast time (CR sub time unconfirmed)."
+            )
         return result
 
     def _demo_weekly(self, result: WeeklySchedule, reason: str | None = None) -> WeeklySchedule:
         """Render the full pipeline over sample data — no network, no token."""
         from .fixtures.demo_data import build_demo_timetables
 
-        sub_raw, raw_raw = build_demo_timetables(result.iso_year, result.iso_week)
+        year, week = result.iso_year, result.iso_week
+        sub_raw, raw_raw = build_demo_timetables(year, week)
+        window_pairs = [
+            build_demo_timetables(iw.year, iw.week)
+            for iw in week_window(year, week, WINDOW_BEFORE, WINDOW_AFTER)
+        ]
         self._assemble(
             result,
             sub_raw,
             raw_raw,
+            window_pairs,
             source="sample",
             fetched_at=datetime.now(timezone.utc),
             stale=False,
