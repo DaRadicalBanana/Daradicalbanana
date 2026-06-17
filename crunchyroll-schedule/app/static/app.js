@@ -2,6 +2,7 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const REFRESH_MS = 5 * 60 * 1000; // auto-refresh every 5 minutes
 let current = { year: null, week: null };
 let view = localStorage.getItem("view") || "week";
+let airType = localStorage.getItem("airType") === "dub" ? "dub" : "sub";
 let lastData = null;
 let refreshTimer = null;
 
@@ -17,12 +18,16 @@ function toggleFav(route) {
   if (lastData) render(lastData);
 }
 function calendarHref() {
+  const params = new URLSearchParams({ air_type: airType });
   const favs = [...favorites];
-  return favs.length ? `/api/calendar.ics?routes=${encodeURIComponent(favs.join(","))}` : "/api/calendar.ics";
+  if (favs.length) params.set("routes", favs.join(","));
+  return `/api/calendar.ics?${params.toString()}`;
 }
 
 async function load(year, week) {
-  const qs = year && week ? `?year=${year}&week=${week}` : "";
+  const params = new URLSearchParams({ air_type: airType });
+  if (year && week) { params.set("year", year); params.set("week", week); }
+  const qs = `?${params.toString()}`;
   setStatus("Loading…");
   try {
     const res = await fetch(`/api/schedule${qs}`, { cache: "no-store" });
@@ -176,6 +181,8 @@ function applyView() {
   document.getElementById("showcontrols").hidden = view !== "shows";
   document.getElementById("view-week").classList.toggle("active", view === "week");
   document.getElementById("view-shows").classList.toggle("active", view === "shows");
+  document.getElementById("at-sub").classList.toggle("active", airType === "sub");
+  document.getElementById("at-dub").classList.toggle("active", airType === "dub");
 }
 
 function render(data) {
@@ -225,6 +232,15 @@ document.getElementById("next").addEventListener("click", () => shiftWeek(1));
 document.getElementById("today").addEventListener("click", () => load());
 document.getElementById("view-week").addEventListener("click", () => setView("week"));
 document.getElementById("view-shows").addEventListener("click", () => setView("shows"));
+
+function setAirType(t) {
+  airType = t;
+  localStorage.setItem("airType", t);
+  applyView();
+  load(current.year, current.week);
+}
+document.getElementById("at-sub").addEventListener("click", () => setAirType("sub"));
+document.getElementById("at-dub").addEventListener("click", () => setAirType("dub"));
 
 // search + favorites
 document.getElementById("search").addEventListener("input", (e) => {

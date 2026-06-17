@@ -39,28 +39,33 @@ async def health() -> dict:
 async def schedule(
     year: int | None = Query(default=None),
     week: int | None = Query(default=None),
+    air_type: str = Query(default="sub"),
 ) -> JSONResponse:
     if year is None or week is None:
         iw = current_iso_week(settings.timezone)
         year, week = iw.year, iw.week
-    data = await _service.weekly(year, week)
+    data = await _service.weekly(year, week, air_type)
     # Short client cache so a phone refreshing / re-focusing doesn't hammer the
     # backend; the app also auto-refreshes every 5 min.
     return JSONResponse(to_jsonable(data), headers={"Cache-Control": "private, max-age=60"})
 
 
 @app.get("/api/calendar.ics")
-async def calendar_ics(routes: str | None = Query(default=None)) -> Response:
+async def calendar_ics(
+    routes: str | None = Query(default=None),
+    air_type: str = Query(default="sub"),
+) -> Response:
     """iCalendar feed of each show's next episode — subscribe in your phone's
     calendar (use the http(s) URL as a subscription/'webcal' feed).
 
     Optional `routes` (comma-separated show routes) limits the feed, e.g. to your
-    favorites.
+    favorites. `air_type` selects sub or dub timing.
     """
     iw = current_iso_week(settings.timezone)
-    data = await _service.weekly(iw.year, iw.week)
+    data = await _service.weekly(iw.year, iw.week, air_type)
     route_filter = {r for r in routes.split(",") if r} if routes else None
-    body = build_ics(data, routes=route_filter)
+    calname = f"Crunchyroll Schedule ({data.air_type})"
+    body = build_ics(data, calname=calname, routes=route_filter)
     return Response(
         content=body,
         media_type="text/calendar; charset=utf-8",

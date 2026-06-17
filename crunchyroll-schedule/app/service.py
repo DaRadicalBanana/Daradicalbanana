@@ -95,18 +95,19 @@ class ScheduleService:
         self.animeschedule = AnimeScheduleClient(settings, cache, limiter)
         self.anilist = AniListClient(settings, cache, limiter)
 
-    async def weekly(self, year: int, week: int) -> WeeklySchedule:
+    async def weekly(self, year: int, week: int, air_type: str = "sub") -> WeeklySchedule:
+        air_type = "dub" if air_type == "dub" else "sub"
         tz = self.settings.timezone
-        result = WeeklySchedule(iso_year=year, iso_week=week, timezone=tz)
+        result = WeeklySchedule(iso_year=year, iso_week=week, timezone=tz, air_type=air_type)
         cw = current_iso_week(tz)
         result.is_current_week = (cw.year == year and cw.week == week)
 
         if self.settings.demo_mode:
             return self._demo_weekly(result)
 
-        # ---- AnimeSchedule sub + raw for the requested week (drives the grid) ----
+        # ---- AnimeSchedule primary (sub|dub) + raw for the week (drives grid) ----
         try:
-            sub_raw, sub_meta = await self.animeschedule.timetable("sub", year, week, tz)
+            sub_raw, sub_meta = await self.animeschedule.timetable(air_type, year, week, tz)
             raw_raw, _ = await self.animeschedule.timetable("raw", year, week, tz)
         except Exception as exc:  # auth/egress/availability
             result.warnings.append(f"AnimeSchedule unavailable: {exc}")
@@ -124,7 +125,7 @@ class ScheduleService:
                 window_pairs.append((sub_raw or [], raw_raw or []))
                 continue
             try:
-                w_sub, _ = await self.animeschedule.timetable("sub", iw.year, iw.week, tz)
+                w_sub, _ = await self.animeschedule.timetable(air_type, iw.year, iw.week, tz)
                 w_raw, _ = await self.animeschedule.timetable("raw", iw.year, iw.week, tz)
                 window_pairs.append((w_sub or [], w_raw or []))
             except Exception:
@@ -203,10 +204,10 @@ class ScheduleService:
         """Render the full pipeline over sample data — no network, no token."""
         from .fixtures.demo_data import build_demo_timetables
 
-        year, week = result.iso_year, result.iso_week
-        sub_raw, raw_raw = build_demo_timetables(year, week)
+        year, week, air_type = result.iso_year, result.iso_week, result.air_type
+        sub_raw, raw_raw = build_demo_timetables(year, week, air_type)
         window_pairs = [
-            build_demo_timetables(iw.year, iw.week)
+            build_demo_timetables(iw.year, iw.week, air_type)
             for iw in week_window(year, week, WINDOW_BEFORE, WINDOW_AFTER)
         ]
         self._assemble(

@@ -34,6 +34,7 @@ h1 { font-size: 1.3rem; margin: 0 0 .5rem; }
 .controls button:disabled { opacity: .4; cursor: default; }
 .today-btn { border-color: var(--accent) !important; }
 #weeklabel { font-weight: 600; }
+.toggles { display: flex; gap: .6rem; flex-wrap: wrap; }
 .viewtoggle { display: inline-flex; margin-top: .6rem; border: 1px solid #2c3140; border-radius: 6px; overflow: hidden; }
 .viewtoggle button {
   background: var(--panel); color: var(--muted); border: none;

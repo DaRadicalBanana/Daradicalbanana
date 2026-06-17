@@ -68,6 +68,7 @@ class WeeklySchedule:
     iso_year: int
     iso_week: int
     timezone: str
+    air_type: str = "sub"  # "sub" or "dub"
     is_current_week: bool = False
     # weekday index 0=Mon .. 6=Sun -> releases that fall on that local day
     days: dict[int, list[EpisodeRelease]] = field(default_factory=dict)

@@ -76,6 +76,26 @@ def test_demo_episode_numbers_increment_across_weeks():
     assert e28 == e27 + 1
 
 
+def test_demo_dub_excludes_shows_without_dub():
+    sub, _ = build_demo_timetables(2026, 27, "sub")
+    dub, _ = build_demo_timetables(2026, 27, "dub")
+    sub_routes = {e["Route"] for e in sub}
+    dub_routes = {e["Route"] for e in dub}
+    # neon-garden-requiem and hollow-crown-saga have no dub in the sample set.
+    assert "neon-garden-requiem" in sub_routes and "neon-garden-requiem" not in dub_routes
+    assert dub_routes < sub_routes  # strict subset
+    assert all(e["AirType"] == "dub" for e in dub)
+
+
+def test_demo_dub_mode_through_service(tmp_path):
+    svc = ScheduleService(_demo_settings(tmp_path))
+    iw = iso_week_of(2026, 7, 1)
+    sub_res = asyncio.run(svc.weekly(iw.year, iw.week, "sub"))
+    dub_res = asyncio.run(svc.weekly(iw.year, iw.week, "dub"))
+    assert sub_res.air_type == "sub" and dub_res.air_type == "dub"
+    assert len(dub_res.shows) < len(sub_res.shows)
+
+
 def test_shows_window_gives_last_and_next(tmp_path):
     # In demo mode the window spans w-1..w+2, so a show should be able to show
     # both a last-released and a next-scheduled episode.

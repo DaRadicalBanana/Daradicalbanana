@@ -26,9 +26,15 @@
       <span id="weeklabel">Loading…</span>
       <button id="next" aria-label="Next week">&rarr;</button>
     </div>
-    <div class="viewtoggle" role="tablist" aria-label="View">
-      <button id="view-week" class="active" role="tab">Week</button>
-      <button id="view-shows" role="tab">Shows</button>
+    <div class="toggles">
+      <div class="viewtoggle" role="tablist" aria-label="View">
+        <button id="view-week" class="active" role="tab">Week</button>
+        <button id="view-shows" role="tab">Shows</button>
+      </div>
+      <div class="viewtoggle" role="tablist" aria-label="Audio">
+        <button id="at-sub" class="active" role="tab">Sub</button>
+        <button id="at-dub" role="tab">Dub</button>
+      </div>
     </div>
     <div id="status" class="status"></div>
     <div id="freshness" class="freshness"></div>
@@ -51,7 +57,8 @@
       Times shown in <strong id="tz"></strong>. Future episodes are
       <em>projections</em> and may change. Episodes flagged
       <span class="badge jp">JP broadcast time</span> have an unconfirmed
-      Crunchyroll sub time. Timing data: AnimeSchedule.net · metadata: AniList.
+      Crunchyroll release time. Toggle Sub/Dub for each track's timing.
+      Timing data: AnimeSchedule.net · metadata: AniList.
     </p>
   </footer>
   <script src="/static/app.js"></script>
