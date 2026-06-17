@@ -59,6 +59,15 @@ icon (it ships a web manifest + iOS meta tags).
   it prints a public `https://…trycloudflare.com` URL you can open anywhere (no
   account needed). Use sparingly; it's a public URL while running.
 
+### Subscribe in your phone's calendar
+
+The app serves an iCalendar feed of each show's next episode at
+**`/api/calendar.ics`**. Add it as a *subscribed* calendar (iOS: Calendar →
+Add Account → Other → Add Subscribed Calendar → use
+`http://<your-computer-ip>:8000/api/calendar.ics`) and upcoming episodes show up
+alongside your normal events. Projected/JP-fallback episodes are marked in the
+event title.
+
 ### Going live
 
 ```bash

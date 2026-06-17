@@ -84,6 +84,8 @@ h1 { font-size: 1.3rem; margin: 0 0 .5rem; }
 .badge.proj { background: rgba(154,160,173,.15); color: var(--muted); border: 1px solid var(--muted); }
 footer { padding: 1rem 1.5rem; color: var(--muted); font-size: .8rem; border-top: 1px solid #262a36; }
 footer .badge.jp { font-size: .65rem; }
+footer a { color: var(--accent); text-decoration: none; }
+.calsub { padding: .5rem .7rem; background: var(--panel); border-radius: 6px; }
 
 /* ---- Shows view: two columns on wide screens ---- */
 @media (min-width: 760px) {

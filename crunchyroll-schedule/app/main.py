@@ -9,10 +9,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import FastAPI, Query
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
+from .ics import build_ics
 from .isoweek import current_iso_week
 from .models import to_jsonable
 from .service import ScheduleService
@@ -46,6 +47,23 @@ async def schedule(
     # Short client cache so a phone refreshing / re-focusing doesn't hammer the
     # backend; the app also auto-refreshes every 5 min.
     return JSONResponse(to_jsonable(data), headers={"Cache-Control": "private, max-age=60"})
+
+
+@app.get("/api/calendar.ics")
+async def calendar_ics() -> Response:
+    """iCalendar feed of each show's next episode — subscribe in your phone's
+    calendar (use the http(s) URL as a subscription/'webcal' feed)."""
+    iw = current_iso_week(settings.timezone)
+    data = await _service.weekly(iw.year, iw.week)
+    body = build_ics(data)
+    return Response(
+        content=body,
+        media_type="text/calendar; charset=utf-8",
+        headers={
+            "Content-Disposition": 'inline; filename="crunchyroll-schedule.ics"',
+            "Cache-Control": "private, max-age=300",
+        },
+    )
 
 
 @app.get("/")
