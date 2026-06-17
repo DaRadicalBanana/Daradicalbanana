@@ -93,6 +93,9 @@ class ScheduleService:
         tz = self.settings.timezone
         result = WeeklySchedule(iso_year=year, iso_week=week, timezone=tz)
 
+        if self.settings.demo_mode:
+            return self._demo_weekly(result)
+
         # ---- AnimeSchedule sub + raw ----
         try:
             sub_raw, sub_meta = await self.animeschedule.timetable("sub", year, week, tz)
@@ -100,23 +103,49 @@ class ScheduleService:
         except Exception as exc:  # auth/egress/availability
             result.warnings.append(f"AnimeSchedule unavailable: {exc}")
             result.freshness.append(Freshness(None, "animeschedule", stale=True, note=str(exc)))
-            return await self._enrich_only(result, year)
+            await self._enrich_only(result, year)
+            if not result.shows:
+                # Never show a blank app: fall back to clearly-labelled samples.
+                return self._demo_weekly(result, reason="live data unavailable")
+            return result
 
-        sub_entries = [_normalize_entry(e) for e in (sub_raw or [])]
-        raw_entries = [_normalize_entry(e) for e in (raw_raw or [])]
+        self._assemble(
+            result,
+            sub_raw or [],
+            raw_raw or [],
+            source="animeschedule",
+            fetched_at=sub_meta.fetched_at if sub_meta else None,
+            stale=not (sub_meta.fresh if sub_meta else False),
+        )
+
+        # ---- AniList enrichment (cover art + projected premieres) ----
+        await self._apply_anilist(result, year)
+        return result
+
+    def _assemble(
+        self,
+        result: WeeklySchedule,
+        sub_raw: list[dict],
+        raw_raw: list[dict],
+        *,
+        source: str,
+        fetched_at,
+        stale: bool,
+    ) -> WeeklySchedule:
+        """Shared pipeline: normalize -> CR-filter -> classify -> group -> shows.
+
+        Used by both the live path and demo mode so they behave identically.
+        """
+        tz = result.timezone
+        sub_entries = [_normalize_entry(e) for e in sub_raw]
+        raw_entries = [_normalize_entry(e) for e in raw_raw]
         raw_index = {_key(e): e for e in raw_entries}
 
         cr_entries = [e for e in sub_entries if is_crunchyroll(e)]
         for e in cr_entries:
             e.confidence = _classify(e, raw_index)
 
-        result.freshness.append(
-            Freshness(
-                fetched_at=sub_meta.fetched_at if sub_meta else None,
-                source="animeschedule",
-                stale=not (sub_meta.fresh if sub_meta else False),
-            )
-        )
+        result.freshness.append(Freshness(fetched_at=fetched_at, source=source, stale=stale))
         if any(e.confidence == TimeConfidence.JP_FALLBACK for e in cr_entries):
             result.warnings.append(
                 "Some episodes show JP broadcast time (CR sub time unconfirmed)."
@@ -134,9 +163,25 @@ class ScheduleService:
 
         # ---- per-show last/next ----
         result.shows = self._build_shows(cr_entries)
+        return result
 
-        # ---- AniList enrichment (cover art + projected premieres) ----
-        await self._apply_anilist(result, year)
+    def _demo_weekly(self, result: WeeklySchedule, reason: str | None = None) -> WeeklySchedule:
+        """Render the full pipeline over sample data — no network, no token."""
+        from .fixtures.demo_data import build_demo_timetables
+
+        sub_raw, raw_raw = build_demo_timetables(result.iso_year, result.iso_week)
+        self._assemble(
+            result,
+            sub_raw,
+            raw_raw,
+            source="sample",
+            fetched_at=datetime.now(timezone.utc),
+            stale=False,
+        )
+        msg = "SAMPLE DATA — not live Crunchyroll data."
+        if reason:
+            msg += f" ({reason})"
+        result.warnings.insert(0, msg)
         return result
 
     def _build_shows(self, entries: list[EpisodeRelease]) -> list[Show]:

@@ -29,6 +29,7 @@ async def health() -> dict:
         "ok": True,
         "timezone": settings.timezone,
         "animeschedule_token_present": settings.has_token,
+        "demo_mode": settings.demo_mode,
         "rate_per_min": settings.rate_per_min,
     }
 

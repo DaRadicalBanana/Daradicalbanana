@@ -22,15 +22,26 @@ When AnimeSchedule's sub timetable falls back to the raw/JP broadcast time, the
 episode is flagged **"JP broadcast time (CR sub time unconfirmed)"**. Future
 episodes are rendered as **projections**. Every view shows **data freshness**.
 
-## Quick start
+## Quick start (zero config — runs in demo mode)
 
 ```bash
 cd crunchyroll-schedule
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env          # then set ANIMESCHEDULE_TOKEN
 uvicorn app.main:app --reload
 # open http://127.0.0.1:8000
+```
+
+With no `ANIMESCHEDULE_TOKEN` set, the app starts in **demo mode**: it renders a
+full weekly calendar from sample data (clearly banner-labelled "SAMPLE DATA"),
+exercising the real pipeline — CR filtering, sub→raw fallback flags, last/next,
+multi-episode drops, delays. Force it on/off with `APP_DEMO=1` / `APP_DEMO=0`.
+
+### Going live
+
+```bash
+cp .env.example .env          # then set ANIMESCHEDULE_TOKEN
+APP_DEMO=0 uvicorn app.main:app --reload
 ```
 
 ## Verify the upstream contract (Step 2)
@@ -58,8 +69,11 @@ week-numbering (including the year-boundary case).
 
 ## Status
 
-- Steps 1 (strategy restatement + critique) and 3 (model + scaffold) are done.
-- Step 2 (live verification) is implemented as `scripts/verify_step2.py` but
-  **could not be run** here: the sandbox blocks egress to both APIs and no token
-  is set. Run it once those are available.
+- Steps 1 (strategy + critique) and 3 (model + scaffold) are done; the app runs
+  end to end in demo mode with no token or network.
+- Step 2 (live verification): the live call is blocked in the sandbox (egress +
+  no token), so `scripts/verify_step2.py` is ready to run when those exist. From
+  the cited wrapper source I did resolve the casing question — the live API is
+  almost certainly **PascalCase** (see `DATA_MODEL.md`); fixtures match and the
+  parser handles both regardless.
 ```

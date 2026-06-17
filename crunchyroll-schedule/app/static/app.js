@@ -49,6 +49,9 @@ function render(data) {
     `${data.iso_year} · ISO week ${data.iso_week}`;
   document.getElementById("tz").textContent = data.timezone;
 
+  const isSample = (data.freshness || []).some((f) => f.source === "sample");
+  document.getElementById("samplebanner").hidden = !isSample;
+
   const fresh = (data.freshness || [])
     .map((f) => {
       const when = f.fetched_at ? new Date(f.fetched_at).toLocaleString("en-US", { timeZone: data.timezone }) : "never";

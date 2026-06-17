@@ -30,20 +30,33 @@ class Settings:
     timetable_ttl: int
     seasonal_ttl: int
     cache_dir: Path
+    demo_mode: bool
 
     @property
     def has_token(self) -> bool:
         return bool(self.animeschedule_token)
 
 
+def _truthy(v: str | None) -> bool | None:
+    if v is None:
+        return None
+    return v.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def load_settings() -> Settings:
+    token = os.getenv("ANIMESCHEDULE_TOKEN") or None
+    demo_override = _truthy(os.getenv("APP_DEMO"))
+    # Demo mode renders sample data with no network. Default it ON when there's
+    # no token so the app is always runnable; an explicit APP_DEMO wins.
+    demo = demo_override if demo_override is not None else (token is None)
     return Settings(
-        animeschedule_token=os.getenv("ANIMESCHEDULE_TOKEN") or None,
+        animeschedule_token=token,
         timezone=os.getenv("APP_TIMEZONE", "America/New_York"),
         rate_per_min=int(os.getenv("APP_RATE_PER_MIN", "30")),
         timetable_ttl=int(os.getenv("APP_TIMETABLE_TTL", "21600")),
         seasonal_ttl=int(os.getenv("APP_SEASONAL_TTL", "86400")),
         cache_dir=Path(os.getenv("APP_CACHE_DIR", str(Path(__file__).resolve().parent.parent / ".cache"))),
+        demo_mode=demo,
     )
 
 

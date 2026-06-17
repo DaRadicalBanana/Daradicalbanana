@@ -95,6 +95,34 @@ empty/unavailable for the viewed week, `_enrich_only()` renders AniList
 `nextAiringEpisode` premieres for the season, every card marked `projected` and
 explicitly noted as JP broadcast time — never shown as a confirmed CR drop.
 
+## Field casing finding (Step 2, partial — from source, not live)
+
+I couldn't make the live call, but I read the two community wrappers the report
+cites. Both deserialize the timetable with **PascalCase** JSON keys
+(`EpisodeDate`, `Streams`, `Route`, `EpisodeNumber`, …):
+
+- `er-azh/go-animeschedule` — Go struct tags `json:"EpisodeDate"` etc. Go's
+  default unmarshalling requires the tag to match the wire format exactly, so the
+  live API almost certainly emits PascalCase.
+- `MolotovCherry/anime-schedule-rs` — Rust wrapper, consistent with the same.
+
+This contradicts the official docs' "nearly always lowerCamelCase" claim.
+**Conclusion: treat PascalCase as the most likely live shape**, but keep the
+casing-tolerant `pick()` so we're correct either way. Sample fixtures are written
+in PascalCase to match. A live run of `verify_step2.py` is still the final word.
+
+## Demo / sample mode (so the app always runs)
+
+Because a token isn't available, the app defaults to **demo mode** (auto-on when
+`ANIMESCHEDULE_TOKEN` is unset; force with `APP_DEMO=1`/`0`). Demo mode renders
+`app/fixtures/demo_data.py` through the *exact same* pipeline as live data —
+PascalCase parsing, CR filtering, sub→raw fallback detection, last/next,
+multi-episode drops, delays, the null-datetime sentinel — so it both demonstrates
+the UI and exercises the real code path. Every demo view is labelled **"SAMPLE
+DATA"** (banner + freshness source `sample`). In live mode, if upstream fails and
+there's no cache, the app falls back to sample data rather than showing a blank
+calendar.
+
 ## Blocked: Step 2 live verification
 
 The sandbox's network egress allowlist returns

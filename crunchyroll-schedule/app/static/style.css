@@ -13,6 +13,12 @@ body {
   background: var(--bg);
   color: var(--text);
 }
+.samplebanner {
+  background: repeating-linear-gradient(45deg, #2a2410, #2a2410 10px, #332b12 10px, #332b12 20px);
+  color: var(--jp); border-bottom: 1px solid var(--jp);
+  padding: .6rem 1.5rem; font-size: .85rem; font-weight: 600;
+}
+.samplebanner code { background: rgba(0,0,0,.3); padding: 0 .3rem; border-radius: 3px; }
 header { padding: 1rem 1.5rem; border-bottom: 1px solid #262a36; }
 h1 { font-size: 1.3rem; margin: 0 0 .5rem; }
 .controls { display: flex; gap: .75rem; align-items: center; }
