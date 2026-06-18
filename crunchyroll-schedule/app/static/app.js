@@ -98,9 +98,13 @@ function watchLink(ep) {
     : "";
 }
 
-function epCard(ep, tz) {
+function epCard(ep, tz, cover) {
   const past = ep.air_at && new Date(ep.air_at).getTime() < Date.now();
+  const thumb = cover
+    ? `<img class="ep-thumb" src="${escapeHtml(cover)}" alt="" loading="lazy" onerror="this.remove()" />`
+    : "";
   return `<div class="ep ${past ? "past" : "upcoming"}">
+    ${thumb}
     <div class="meta">
       <div class="title">${escapeHtml(ep.title)}</div>
       <div>Ep ${epNum(ep)} · <span class="time">${fmtTime(ep.air_at, tz)}</span></div>
@@ -121,12 +125,15 @@ function renderWeek(data) {
   }
   const isCurrentWeek = data.is_current_week;
   const today = localTodayParts(data.timezone).weekday;
+  const coverByRoute = Object.fromEntries(
+    (data.shows || []).map((s) => [s.route, s.cover_image_url])
+  );
   for (let wd = 0; wd < 7; wd++) {
     const eps = (data.days && data.days[wd]) || [];
     const col = document.createElement("div");
     col.className = "day" + (isCurrentWeek && wd === today ? " today" : "");
     const body = eps.length
-      ? eps.map((e) => epCard(e, data.timezone)).join("")
+      ? eps.map((e) => epCard(e, data.timezone, coverByRoute[e.route])).join("")
       : `<div class="empty">No releases</div>`;
     col.innerHTML = `<h2>${DAYS[wd]}${isCurrentWeek && wd === today ? " · Today" : ""}</h2>` + body;
     cal.appendChild(col);
