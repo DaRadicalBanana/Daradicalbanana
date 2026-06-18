@@ -41,6 +41,23 @@ def test_health_does_not_leak_token_value():
     assert "Bearer" not in c.get("/api/health").text
 
 
+def test_schedule_rejects_out_of_range_params():
+    # Invalid week/year are rejected (422) instead of triggering a 500.
+    assert c.get("/api/schedule?year=2026&week=999").status_code == 422
+    assert c.get("/api/schedule?year=1800&week=10").status_code == 422
+    assert c.get("/api/schedule?year=2026&week=25").status_code == 200
+
+
+def test_releases_clamps_far_anchor():
+    # A far-future anchor is clamped (no 500, no unbounded fan-out).
+    r = c.get("/api/releases?range=monthly&anchor=9999-01-01")
+    assert r.status_code == 200
+    anchor = r.json()["anchor"]
+    assert anchor < "9999-01-01"  # clamped toward today
+    # malformed anchor falls back to today (still 200)
+    assert c.get("/api/releases?range=daily&anchor=not-a-date").status_code == 200
+
+
 def test_no_inline_onerror_in_app_js():
     js = (os.path.join(os.path.dirname(__file__), "..", "app", "static", "app.js"))
     with open(js) as f:

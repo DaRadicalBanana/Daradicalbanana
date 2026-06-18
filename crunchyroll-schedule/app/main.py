@@ -63,8 +63,8 @@ async def health() -> dict:
 
 @app.get("/api/schedule")
 async def schedule(
-    year: int | None = Query(default=None),
-    week: int | None = Query(default=None),
+    year: int | None = Query(default=None, ge=2000, le=2100),
+    week: int | None = Query(default=None, ge=1, le=53),
     air_type: str = Query(default="sub"),
 ) -> JSONResponse:
     if year is None or week is None:
@@ -87,15 +87,20 @@ async def releases(
 ) -> JSONResponse:
     """Daily / Weekly / Monthly schedule of releases grouped by date.
     `anchor` (YYYY-MM-DD) defaults to today in the app timezone."""
-    from datetime import date as _date
+    from datetime import date as _date, timedelta as _td
     from zoneinfo import ZoneInfo
 
     try:
         anc = _date.fromisoformat(anchor) if anchor else None
     except ValueError:
         anc = None
+    today = datetime.now(ZoneInfo(settings.timezone)).date()
     if anc is None:
-        anc = datetime.now(ZoneInfo(settings.timezone)).date()
+        anc = today
+    # Clamp the anchor to ~±13 months so paging can't fan out to arbitrary dates
+    # (bounds upstream calls and cache growth).
+    lo, hi = today - _td(days=400), today + _td(days=400)
+    anc = max(lo, min(hi, anc))
     try:
         data = await asyncio.wait_for(_service.schedule_view(range, anc, air_type), timeout=30)
     except asyncio.TimeoutError:
