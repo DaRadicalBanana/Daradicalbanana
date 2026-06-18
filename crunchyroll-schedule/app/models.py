@@ -31,12 +31,14 @@ class EpisodeRelease:
     subtracted_episode_number: int | None  # for multi-episode drops
     air_at: datetime | None         # aware UTC; None if no known time
     confidence: TimeConfidence
+    english_title: str | None = None  # English title shown under the romaji/JP one
     length_min: int | None = None
     airing_status: str | None = None
     delayed_from: datetime | None = None
     delayed_until: datetime | None = None
     streams: dict[str, str] = field(default_factory=dict)
     image_route: str | None = None  # AnimeSchedule cover image path
+    cover_image_url: str | None = None  # resolved cover URL (range views)
 
     @property
     def on_crunchyroll(self) -> bool:
@@ -47,6 +49,7 @@ class EpisodeRelease:
 class Show:
     route: str
     title: str
+    english_title: str | None = None
     anilist_id: int | None = None
     mal_id: int | None = None
     cover_image_url: str | None = None
@@ -77,6 +80,31 @@ class WeeklySchedule:
     freshness: list[Freshness] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     diagnostics: dict = field(default_factory=dict)
+
+
+@dataclass
+class DayGroup:
+    date: str          # YYYY-MM-DD (local)
+    weekday: str       # e.g. "Wed"
+    label: str         # e.g. "Today · Wed Jun 18" or "Wed Jun 18"
+    is_today: bool
+    releases: list[EpisodeRelease] = field(default_factory=list)
+
+
+@dataclass
+class ScheduleView:
+    """Range-based schedule (Daily / Weekly / Monthly), grouped by date."""
+    range: str          # "daily" | "weekly" | "monthly"
+    anchor: str         # YYYY-MM-DD the range is centered on
+    timezone: str
+    air_type: str
+    title: str          # human label for the current range
+    prev_anchor: str    # anchor for the previous range step
+    next_anchor: str    # anchor for the next range step
+    groups: list[DayGroup] = field(default_factory=list)
+    shows: list[Show] = field(default_factory=list)
+    freshness: list[Freshness] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
 
 def to_jsonable(obj: Any) -> Any:

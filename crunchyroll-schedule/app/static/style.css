@@ -42,6 +42,11 @@ h1 { font-size: 1.3rem; margin: 0 0 .5rem; }
 .controls button:disabled { opacity: .4; cursor: default; }
 .today-btn { border-color: var(--accent) !important; }
 #weeklabel { font-weight: 600; }
+#range {
+  background: var(--panel); color: var(--text); border: 1px solid #2c3140;
+  border-radius: 6px; padding: .4rem .6rem; font-size: 1rem; min-height: 40px;
+}
+#rangelabel { font-weight: 600; }
 .toggles { display: flex; gap: .6rem; flex-wrap: wrap; }
 .viewtoggle { display: inline-flex; margin-top: .6rem; border: 1px solid #2c3140; border-radius: 6px; overflow: hidden; }
 .viewtoggle button {
@@ -54,14 +59,16 @@ h1 { font-size: 1.3rem; margin: 0 0 .5rem; }
 .freshness { color: var(--muted); font-size: .8rem; margin-top: .5rem; }
 .warnings { color: var(--jp); font-size: .85rem; margin-top: .4rem; }
 .calendar {
-  display: grid; grid-template-columns: repeat(7, 1fr);
-  gap: .5rem; padding: 1rem 1.5rem;
+  display: flex; flex-direction: column; gap: .6rem;
+  padding: 1rem 1.5rem; max-width: 760px; margin: 0 auto;
 }
-.day { background: var(--panel); border-radius: 8px; padding: .6rem; min-height: 120px; }
-.day.today { outline: 2px solid var(--accent); }
-.day h2 { font-size: .85rem; margin: 0 0 .5rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-.day.today h2 { color: var(--accent); }
-.day .empty { color: #555b68; font-size: .8rem; font-style: italic; }
+.daygroup { background: var(--panel); border-radius: 8px; padding: .6rem .8rem; }
+.daygroup.today { outline: 2px solid var(--accent); }
+.dayhdr { font-size: .8rem; margin: 0 0 .4rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.daygroup.today .dayhdr { color: var(--accent); }
+.daygroup .empty { color: #555b68; font-size: .8rem; font-style: italic; }
+.english { color: var(--muted); font-size: .8rem; font-style: italic; margin: .05rem 0 .15rem; }
+.ep-thumb { width: 38px; height: 52px; object-fit: cover; border-radius: 4px; flex: none; }
 .empty.wide { grid-column: 1 / -1; color: var(--muted); padding: 1.2rem; text-align: center; }
 .ep.past { opacity: .62; }
 .ep .rel { color: var(--muted); font-size: .72rem; }

@@ -15,15 +15,17 @@ blocks egress to animeschedule.net. scripts/verify_step2.py exists to confirm it
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from .cache import FileCache
 from .clients.anilist import AniListClient, crunchyroll_url
 from .clients.animeschedule import AnimeScheduleClient
 from .config import Settings
-from .isoweek import current_iso_week, week_window
+from .isoweek import current_iso_week, iso_week_for, week_window
 from .models import (
+    DayGroup,
+    ScheduleView,
     EpisodeRelease,
     Freshness,
     Show,
@@ -37,6 +39,60 @@ from .ratelimit import RateLimiter
 # last-released and next-scheduled episode for the Shows view.
 WINDOW_BEFORE = 1
 WINDOW_AFTER = 2
+
+RANGES = ("daily", "weekly", "monthly")
+
+
+def _month_bounds(anchor: date) -> tuple[date, date]:
+    start = anchor.replace(day=1)
+    nxt = start.replace(year=start.year + 1, month=1) if start.month == 12 else start.replace(month=start.month + 1)
+    return start, nxt - timedelta(days=1)
+
+
+def _range_bounds(range_kind: str, anchor: date) -> tuple[date, date]:
+    if range_kind == "daily":
+        return anchor, anchor
+    if range_kind == "monthly":
+        return _month_bounds(anchor)
+    monday = anchor - timedelta(days=anchor.weekday())  # weekly
+    return monday, monday + timedelta(days=6)
+
+
+def _weeks_for_bounds(start: date, end: date) -> list:
+    weeks, d = [], start - timedelta(days=start.weekday())  # Monday of start's week
+    while d <= end:
+        weeks.append(iso_week_for(d))
+        d += timedelta(days=7)
+    return weeks
+
+
+def _shift_anchor(range_kind: str, anchor: date, direction: int) -> date:
+    if range_kind == "daily":
+        return anchor + timedelta(days=direction)
+    if range_kind == "weekly":
+        return anchor + timedelta(days=7 * direction)
+    # monthly: jump to the 1st of the prev/next month
+    start = anchor.replace(day=1)
+    if direction < 0:
+        return (start - timedelta(days=1)).replace(day=1)
+    return _month_bounds(start)[1] + timedelta(days=1)
+
+
+def _range_title(range_kind: str, anchor: date, start: date, end: date, today: date) -> str:
+    if range_kind == "daily":
+        return ("Today · " if anchor == today else "") + anchor.strftime("%a, %b ") + str(anchor.day)
+    if range_kind == "monthly":
+        return anchor.strftime("%B %Y")
+    return f"Week of {start.strftime('%b ')}{start.day}"
+
+
+def _day_label(d: date, today: date) -> str:
+    base = d.strftime("%a, %b ") + str(d.day)
+    if d == today:
+        return "Today · " + base
+    if d == today + timedelta(days=1):
+        return "Tomorrow · " + base
+    return base
 
 
 def _stream_census(sub_raw: list[dict], cr_entries: list) -> dict:
@@ -83,9 +139,12 @@ def _stream_census(sub_raw: list[dict], cr_entries: list) -> dict:
 
 
 def _normalize_entry(raw: dict) -> EpisodeRelease:
+    title = pick(raw, "title", "romaji", "english", default="") or ""
+    english = pick(raw, "english") or None
     return EpisodeRelease(
         route=pick(raw, "route", default="") or "",
-        title=pick(raw, "title", "english", "romaji", default="") or "",
+        title=title,
+        english_title=(english if english and english != title else None),
         episode_number=_as_int(pick(raw, "episodeNumber")),
         subtracted_episode_number=_as_int(pick(raw, "subtractedEpisodeNumber")),
         air_at=parse_dt(pick(raw, "episodeDate")),
@@ -137,6 +196,87 @@ class ScheduleService:
         self.cache = cache
         self.animeschedule = AnimeScheduleClient(settings, cache, limiter)
         self.anilist = AniListClient(settings, cache, limiter)
+
+    async def _week_cr_entries(self, air_type: str, year: int, week: int) -> tuple[list[EpisodeRelease], bool]:
+        """Classified Crunchyroll entries for one ISO week. Returns (entries, is_sample)."""
+        tz = self.settings.timezone
+        if self.settings.demo_mode:
+            from .fixtures.demo_data import build_demo_timetables
+
+            sub_raw, raw_raw = build_demo_timetables(year, week, air_type)
+            return self._classify_cr(sub_raw, raw_raw), True
+        sub_raw, _ = await self.animeschedule.timetable(air_type, year, week, tz)
+        raw_raw, _ = await self.animeschedule.timetable("raw", year, week, tz)
+        return self._classify_cr(sub_raw or [], raw_raw or []), False
+
+    async def schedule_view(self, range_kind: str, anchor: date, air_type: str = "sub") -> ScheduleView:
+        """Daily / Weekly / Monthly schedule of CR releases grouped by date."""
+        air_type = "dub" if air_type == "dub" else "sub"
+        range_kind = range_kind if range_kind in RANGES else "daily"
+        tz = self.settings.timezone
+        local = ZoneInfo(tz)
+        today = datetime.now(local).date()
+        start, end = _range_bounds(range_kind, anchor)
+        view = ScheduleView(
+            range=range_kind,
+            anchor=anchor.isoformat(),
+            timezone=tz,
+            air_type=air_type,
+            title=_range_title(range_kind, anchor, start, end, today),
+            prev_anchor=_shift_anchor(range_kind, anchor, -1).isoformat(),
+            next_anchor=_shift_anchor(range_kind, anchor, +1).isoformat(),
+        )
+
+        is_sample = False
+        seen: set = set()
+        by_date: dict[date, list[EpisodeRelease]] = {}
+        for iw in _weeks_for_bounds(start, end):
+            try:
+                entries, sample = await self._week_cr_entries(air_type, iw.year, iw.week)
+                is_sample = is_sample or sample
+            except Exception as exc:
+                view.warnings.append(f"AnimeSchedule unavailable for {iw}: {exc}")
+                continue
+            for e in entries:
+                if not e.air_at:
+                    continue
+                d = e.air_at.astimezone(local).date()
+                if d < start or d > end:
+                    continue
+                key = (e.route, e.episode_number, e.air_at.isoformat())
+                if key in seen:
+                    continue
+                seen.add(key)
+                if e.image_route:
+                    e.cover_image_url = f"{self.settings.img_base}{e.image_route}"
+                by_date.setdefault(d, []).append(e)
+
+        if range_kind == "daily":
+            dates = [start]
+        elif range_kind == "weekly":
+            dates = [start + timedelta(days=i) for i in range(7)]
+        else:  # monthly: only dates with releases
+            dates = sorted(by_date.keys())
+        for d in dates:
+            rel = sorted(by_date.get(d, []), key=lambda x: x.air_at)
+            view.groups.append(
+                DayGroup(
+                    date=d.isoformat(),
+                    weekday=d.strftime("%a"),
+                    label=_day_label(d, today),
+                    is_today=(d == today),
+                    releases=rel,
+                )
+            )
+
+        if any(e.confidence == TimeConfidence.JP_FALLBACK for rel in by_date.values() for e in rel):
+            view.warnings.append("Some episodes show JP broadcast time (CR sub time unconfirmed).")
+        if is_sample:
+            view.warnings.insert(0, "SAMPLE DATA — not live Crunchyroll data.")
+            view.freshness.append(Freshness(fetched_at=datetime.now(timezone.utc), source="sample", stale=False))
+        else:
+            view.freshness.append(Freshness(fetched_at=datetime.now(timezone.utc), source="animeschedule", stale=False))
+        return view
 
     async def weekly(self, year: int, week: int, air_type: str = "sub") -> WeeklySchedule:
         air_type = "dub" if air_type == "dub" else "sub"
@@ -301,7 +441,9 @@ class ScheduleService:
                     next_scheduled.confidence = TimeConfidence.CONFIRMED_SUB
                 elif next_scheduled.confidence == TimeConfidence.UNKNOWN:
                     next_scheduled.confidence = TimeConfidence.PROJECTED
-            title = (last_released or next_scheduled or eps[0]).title
+            ref = last_released or next_scheduled or eps[0]
+            title = ref.title
+            english = next((e.english_title for e in eps if e.english_title), None)
             cr = next((e.streams.get("crunchyroll") for e in eps if e.streams.get("crunchyroll")), None)
             img_route = next((e.image_route for e in eps if e.image_route), None)
             cover = f"{self.settings.img_base}{img_route}" if img_route else None
@@ -309,6 +451,7 @@ class ScheduleService:
                 Show(
                     route=route,
                     title=title,
+                    english_title=english,
                     crunchyroll_url=cr,
                     cover_image_url=cover,
                     last_released=last_released,

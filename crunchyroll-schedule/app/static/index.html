@@ -21,14 +21,18 @@
   <header>
     <h1>Crunchyroll Weekly Schedule</h1>
     <div class="controls">
-      <button id="prev" aria-label="Previous week">&larr;</button>
-      <button id="today" class="today-btn">Today</button>
-      <span id="weeklabel">Loading…</span>
-      <button id="next" aria-label="Next week">&rarr;</button>
+      <button id="prev" aria-label="Previous">&larr;</button>
+      <select id="range" aria-label="Time range">
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+      </select>
+      <span id="rangelabel">Loading…</span>
+      <button id="next" aria-label="Next">&rarr;</button>
     </div>
     <div class="toggles">
       <div class="viewtoggle" role="tablist" aria-label="View">
-        <button id="view-week" class="active" role="tab" aria-selected="true">Week</button>
+        <button id="view-schedule" class="active" role="tab" aria-selected="true">Schedule</button>
         <button id="view-shows" role="tab" aria-selected="false">Shows</button>
       </div>
       <div class="viewtoggle" role="tablist" aria-label="Audio track">

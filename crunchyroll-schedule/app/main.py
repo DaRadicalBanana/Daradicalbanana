@@ -6,6 +6,7 @@ Then open http://127.0.0.1:8000
 """
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, Query
@@ -47,6 +48,27 @@ async def schedule(
     data = await _service.weekly(year, week, air_type)
     # Short client cache so a phone refreshing / re-focusing doesn't hammer the
     # backend; the app also auto-refreshes every 5 min.
+    return JSONResponse(to_jsonable(data), headers={"Cache-Control": "private, max-age=60"})
+
+
+@app.get("/api/releases")
+async def releases(
+    range: str = Query(default="daily"),
+    anchor: str | None = Query(default=None),
+    air_type: str = Query(default="sub"),
+) -> JSONResponse:
+    """Daily / Weekly / Monthly schedule of releases grouped by date.
+    `anchor` (YYYY-MM-DD) defaults to today in the app timezone."""
+    from datetime import date as _date
+    from zoneinfo import ZoneInfo
+
+    try:
+        anc = _date.fromisoformat(anchor) if anchor else None
+    except ValueError:
+        anc = None
+    if anc is None:
+        anc = datetime.now(ZoneInfo(settings.timezone)).date()
+    data = await _service.schedule_view(range, anc, air_type)
     return JSONResponse(to_jsonable(data), headers={"Cache-Control": "private, max-age=60"})
 
 
