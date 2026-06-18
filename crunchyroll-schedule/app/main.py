@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, Query
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
@@ -145,8 +145,20 @@ async def calendar_ics(
 
 
 @app.get("/")
-async def index() -> FileResponse:
-    return FileResponse(STATIC_DIR / "index.html")
+async def index() -> HTMLResponse:
+    # Serve index.html with a per-deploy cache-busting token so the browser never
+    # pairs a fresh HTML with a stale app.js/style.css. The token is the newest
+    # mtime of those assets; index.html itself is always revalidated (no-cache).
+    html = (STATIC_DIR / "index.html").read_text()
+    try:
+        v = int(max(
+            (STATIC_DIR / "app.js").stat().st_mtime,
+            (STATIC_DIR / "style.css").stat().st_mtime,
+        ))
+    except OSError:
+        v = 0
+    html = html.replace("__V__", str(v))
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
