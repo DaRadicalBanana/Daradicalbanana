@@ -136,8 +136,20 @@ function watchLink(ep) {
 }
 function coverImg(url, cls) {
   return url
-    ? `<img class="${cls}" src="${escapeHtml(url)}" alt="" loading="lazy" onerror="this.remove()" />`
+    ? `<img class="${cls}" src="${escapeHtml(url)}" alt="" loading="lazy" />`
     : (cls === "noart" ? `<div class="noart"></div>` : "");
+}
+
+// Attach image error fallbacks in JS (no inline handlers, so a strict CSP holds).
+function wireImages(container) {
+  container.querySelectorAll("img").forEach((img) => {
+    img.addEventListener("error", () => {
+      if (img.classList.contains("ep-thumb")) { img.remove(); return; }
+      const d = document.createElement("div");
+      d.className = "noart";
+      img.replaceWith(d);
+    });
+  });
 }
 function englishLine(ep) {
   return ep.english_title ? `<div class="english">${escapeHtml(ep.english_title)}</div>` : "";
@@ -179,6 +191,7 @@ function renderSchedule(data) {
         <h2 class="dayhdr">${escapeHtml(g.label)}</h2>${body}</section>`;
     })
     .join("");
+  wireImages(cal);
 }
 
 // ---- shows view ----
@@ -221,9 +234,11 @@ function renderShows(data) {
     if (an) return -1; if (bn) return 1;
     return a.title.localeCompare(b.title);
   });
-  document.getElementById("showlist").innerHTML = shows.length
+  const el = document.getElementById("showlist");
+  el.innerHTML = shows.length
     ? shows.map((s) => showRow(s, data.timezone)).join("")
     : `<div class="empty wide">No Crunchyroll shows match.</div>`;
+  wireImages(el);
 }
 
 // shared header meta (banner, freshness, warnings, calendar link)

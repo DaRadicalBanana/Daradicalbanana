@@ -10,7 +10,7 @@ import asyncio
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
@@ -24,6 +24,30 @@ app = FastAPI(title="Crunchyroll Weekly Schedule", version="0.1.0")
 _service = ScheduleService(settings)
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+# Content-Security-Policy: same-origin scripts/styles only (no inline JS), images
+# allowed over https (external cover art) + data:, no framing.
+_CSP = (
+    "default-src 'self'; "
+    "img-src 'self' https: data:; "
+    "style-src 'self'; "
+    "script-src 'self'; "
+    "connect-src 'self'; "
+    "base-uri 'none'; "
+    "form-action 'none'; "
+    "frame-ancestors 'none'"
+)
+
+
+@app.middleware("http")
+async def security_headers(request, call_next):
+    resp = await call_next(request)
+    resp.headers.setdefault("Content-Security-Policy", _CSP)
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "DENY")
+    resp.headers.setdefault("Referrer-Policy", "no-referrer")
+    resp.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+    return resp
 
 
 @app.get("/api/health")
@@ -82,7 +106,9 @@ async def releases(
 @app.get("/api/debug")
 async def debug(air_type: str = Query(default="sub")) -> JSONResponse:
     """Raw look at the live timetable response (no secrets) to diagnose parsing.
-    Returns the first sub/raw entries verbatim plus a stream-key census."""
+    Disabled by default; set APP_DEBUG=1 to enable (exposes upstream internals)."""
+    if not settings.debug_enabled:
+        raise HTTPException(status_code=404)
     iw = current_iso_week(settings.timezone)
     out: dict = {
         "week": [iw.year, iw.week],

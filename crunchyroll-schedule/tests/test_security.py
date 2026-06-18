@@ -1,0 +1,48 @@
+"""Security hardening tests: headers, debug gating, no secret leakage."""
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from fastapi.testclient import TestClient  # noqa: E402
+
+from app.main import app  # noqa: E402
+
+c = TestClient(app)
+
+
+def test_security_headers_present():
+    for path in ("/", "/api/health"):
+        r = c.get(path)
+        h = r.headers
+        assert "content-security-policy" in {k.lower() for k in h}
+        assert h.get("x-content-type-options") == "nosniff"
+        assert h.get("x-frame-options") == "DENY"
+        assert h.get("referrer-policy") == "no-referrer"
+
+
+def test_csp_blocks_inline_and_framing():
+    csp = c.get("/").headers["content-security-policy"]
+    assert "script-src 'self'" in csp
+    assert "'unsafe-inline'" not in csp  # no inline scripts/handlers needed
+    assert "frame-ancestors 'none'" in csp
+
+
+def test_debug_endpoint_disabled_by_default():
+    # APP_DEBUG is unset in tests -> /api/debug must not expose internals.
+    assert c.get("/api/debug").status_code == 404
+
+
+def test_health_does_not_leak_token_value():
+    body = c.get("/api/health").json()
+    assert "animeschedule_token" not in body
+    assert body.get("animeschedule_token_present") in (True, False)
+    # the literal token value must never appear in the response text
+    assert "Bearer" not in c.get("/api/health").text
+
+
+def test_no_inline_onerror_in_app_js():
+    js = (os.path.join(os.path.dirname(__file__), "..", "app", "static", "app.js"))
+    with open(js) as f:
+        src = f.read()
+    assert "onerror=" not in src  # CSP-incompatible inline handler removed
