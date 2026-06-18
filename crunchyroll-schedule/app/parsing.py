@@ -76,6 +76,38 @@ def _aware(dt: datetime) -> datetime:
     return dt.astimezone(timezone.utc)
 
 
+def _with_scheme(url: str) -> str:
+    url = (url or "").strip()
+    if url and not url.startswith(("http://", "https://")):
+        return "https://" + url
+    return url
+
+
+def normalize_streams(value: Any) -> dict[str, str]:
+    """Normalize AnimeSchedule's `streams` into a {platform: url} dict.
+
+    The live API returns a LIST of objects, e.g.
+        [{"platform": "crunchyroll", "name": "Crunchyroll", "url": "crunchyroll.com/.."}]
+    but a dict ({"crunchyroll": "url"}) shape is also accepted (demo fixtures /
+    older docs). Keys are lowercased platform names; URLs get an https:// scheme
+    if missing (the API omits it).
+    """
+    out: dict[str, str] = {}
+    if isinstance(value, dict):
+        for k, v in value.items():
+            out[str(k).lower()] = _with_scheme(str(v))
+    elif isinstance(value, list):
+        for item in value:
+            if isinstance(item, dict):
+                name = item.get("platform") or item.get("name") or item.get("site")
+                url = item.get("url") or item.get("link") or ""
+                if name:
+                    out[str(name).lower()] = _with_scheme(str(url))
+            elif isinstance(item, str):
+                out[item.lower()] = ""
+    return out
+
+
 def detect_casing(sample: dict[str, Any]) -> str:
     """Best-effort report of which casing a live payload uses (for Step 2)."""
     keys = set(sample) if isinstance(sample, dict) else set()

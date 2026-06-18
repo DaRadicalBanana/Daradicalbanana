@@ -39,7 +39,7 @@ class EpisodeRelease:
 
     @property
     def on_crunchyroll(self) -> bool:
-        return any(k.lower() == "crunchyroll" for k in self.streams)
+        return any("crunchyroll" in k.lower() for k in self.streams)
 
 
 @dataclass

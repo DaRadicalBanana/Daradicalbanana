@@ -30,7 +30,7 @@ from .models import (
     TimeConfidence,
     WeeklySchedule,
 )
-from .parsing import parse_dt, pick
+from .parsing import normalize_streams, parse_dt, pick
 from .ratelimit import RateLimiter
 
 # How many weeks around the requested week to scan when computing each show's
@@ -83,10 +83,9 @@ def _stream_census(sub_raw: list[dict], cr_entries: list) -> dict:
 
 
 def _normalize_entry(raw: dict) -> EpisodeRelease:
-    streams = pick(raw, "streams", default={}) or {}
     return EpisodeRelease(
         route=pick(raw, "route", default="") or "",
-        title=pick(raw, "title", "english", default="") or "",
+        title=pick(raw, "title", "english", "romaji", default="") or "",
         episode_number=_as_int(pick(raw, "episodeNumber")),
         subtracted_episode_number=_as_int(pick(raw, "subtractedEpisodeNumber")),
         air_at=parse_dt(pick(raw, "episodeDate")),
@@ -95,7 +94,7 @@ def _normalize_entry(raw: dict) -> EpisodeRelease:
         airing_status=pick(raw, "airingStatus", "status"),
         delayed_from=parse_dt(pick(raw, "delayedFrom")),
         delayed_until=parse_dt(pick(raw, "delayedUntil")),
-        streams=streams if isinstance(streams, dict) else {},
+        streams=normalize_streams(pick(raw, "streams")),
     )
 
 

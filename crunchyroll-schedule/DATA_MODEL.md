@@ -95,7 +95,22 @@ empty/unavailable for the viewed week, `_enrich_only()` renders AniList
 `nextAiringEpisode` premieres for the season, every card marked `projected` and
 explicitly noted as JP broadcast time — never shown as a confirmed CR drop.
 
-## Field casing finding (Step 2, partial — from source, not live)
+## Field casing finding (RESOLVED against live data, 2026-06-18)
+
+Live `/api/v3/timetables/sub` confirmed the real shape:
+- **Fields are lowerCamelCase** (`episodeDate`, `episodeNumber`, `streams`,
+  `route`, `airType`, `airingStatus`, `delayedFrom/Until`, `lengthMin`, …) —
+  the official docs were right; the Go wrapper's PascalCase was misleading. Our
+  casing-tolerant `pick()` handles it regardless.
+- **`streams` is a LIST of objects**, not a map:
+  `[{"platform":"crunchyroll","name":"Crunchyroll","url":"crunchyroll.com/.."}]`.
+  `parsing.normalize_streams()` converts this (and the dict shape) to
+  `{platform: url}` and adds a missing `https://` scheme. CR detection matches
+  `"crunchyroll"` in a platform key.
+- Dates look like `2026-06-15T10:00:00-04:00` (already in the requested tz).
+- No `subtractedEpisodeNumber` was present in this dataset (handled as None).
+
+### Earlier (pre-token) finding, kept for history
 
 I couldn't make the live call, but I read the two community wrappers the report
 cites. Both deserialize the timetable with **PascalCase** JSON keys
