@@ -29,6 +29,7 @@ async function load(year, week) {
   if (year && week) { params.set("year", year); params.set("week", week); }
   const qs = `?${params.toString()}`;
   setStatus("Loading…");
+  if (!lastData) showOverlay("Loading the schedule… (first load can take ~30–50s while the server wakes up)");
   try {
     const res = await fetch(`/api/schedule${qs}`, { cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -37,8 +38,24 @@ async function load(year, week) {
     setStatus("");
     render(data);
   } catch (err) {
-    setStatus(`Couldn't load schedule (${err.message}). Retrying on refresh.`, true);
+    setStatus(`Couldn't load schedule (${err.message}).`, true);
+    showOverlay(
+      `Couldn't load the schedule (${escapeHtml(err.message)}).`,
+      true
+    );
   }
+}
+
+// Show a message (with optional Retry button) in the visible content area.
+function showOverlay(msg, withRetry) {
+  const retry = withRetry
+    ? ` <button id="retry" class="today-btn">Retry</button>`
+    : "";
+  const html = `<div class="empty wide">${escapeHtml(msg)}${retry}</div>`;
+  document.getElementById("calendar").innerHTML = html;
+  document.getElementById("showlist").innerHTML = html;
+  const btn = document.getElementById("retry");
+  if (btn) btn.addEventListener("click", () => load(current.year, current.week));
 }
 
 function setStatus(msg, isError) {
