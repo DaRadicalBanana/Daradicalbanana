@@ -185,10 +185,16 @@ function applyView() {
   document.getElementById("calendar").hidden = view !== "week";
   document.getElementById("showlist").hidden = view !== "shows";
   document.getElementById("showcontrols").hidden = view !== "shows";
-  document.getElementById("view-week").classList.toggle("active", view === "week");
-  document.getElementById("view-shows").classList.toggle("active", view === "shows");
-  document.getElementById("at-sub").classList.toggle("active", airType === "sub");
-  document.getElementById("at-dub").classList.toggle("active", airType === "dub");
+  setTab("view-week", view === "week");
+  setTab("view-shows", view === "shows");
+  setTab("at-sub", airType === "sub");
+  setTab("at-dub", airType === "dub");
+}
+
+function setTab(id, active) {
+  const el = document.getElementById(id);
+  el.classList.toggle("active", active);
+  el.setAttribute("aria-selected", active ? "true" : "false");
 }
 
 function render(data) {
