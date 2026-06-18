@@ -7,6 +7,7 @@ Then open http://127.0.0.1:8000
 from __future__ import annotations
 
 import asyncio
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -19,6 +20,7 @@ from .ics import build_ics
 from .isoweek import current_iso_week
 from .models import to_jsonable
 from .service import ScheduleService, _normalize_entry, _stream_census, is_crunchyroll
+from .throttle import IPRateLimiter, client_ip
 
 app = FastAPI(title="Crunchyroll Weekly Schedule", version="0.1.0")
 _service = ScheduleService(settings)
@@ -39,15 +41,29 @@ _CSP = (
 )
 
 
-@app.middleware("http")
-async def security_headers(request, call_next):
-    resp = await call_next(request)
+_api_limiter = IPRateLimiter(limit=int(os.getenv("APP_RATELIMIT_PER_MIN", "120")), window=60.0)
+
+
+def _apply_security_headers(resp):
     resp.headers.setdefault("Content-Security-Policy", _CSP)
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     resp.headers.setdefault("X-Frame-Options", "DENY")
     resp.headers.setdefault("Referrer-Policy", "no-referrer")
     resp.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
     return resp
+
+
+@app.middleware("http")
+async def security_headers(request, call_next):
+    # Per-IP rate limit on the API surface (abuse/DoS protection).
+    if request.url.path.startswith("/api/"):
+        allowed, retry = _api_limiter.check(client_ip(request))
+        if not allowed:
+            resp = JSONResponse(
+                {"error": "rate limited"}, status_code=429, headers={"Retry-After": str(retry)}
+            )
+            return _apply_security_headers(resp)
+    return _apply_security_headers(await call_next(request))
 
 
 @app.get("/api/health")
