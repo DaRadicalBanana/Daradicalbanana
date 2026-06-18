@@ -95,6 +95,7 @@ def _normalize_entry(raw: dict) -> EpisodeRelease:
         delayed_from=parse_dt(pick(raw, "delayedFrom")),
         delayed_until=parse_dt(pick(raw, "delayedUntil")),
         streams=normalize_streams(pick(raw, "streams")),
+        image_route=pick(raw, "imageVersionRoute") or None,
     )
 
 
@@ -302,11 +303,14 @@ class ScheduleService:
                     next_scheduled.confidence = TimeConfidence.PROJECTED
             title = (last_released or next_scheduled or eps[0]).title
             cr = next((e.streams.get("crunchyroll") for e in eps if e.streams.get("crunchyroll")), None)
+            img_route = next((e.image_route for e in eps if e.image_route), None)
+            cover = f"{self.settings.img_base}{img_route}" if img_route else None
             shows.append(
                 Show(
                     route=route,
                     title=title,
                     crunchyroll_url=cr,
+                    cover_image_url=cover,
                     last_released=last_released,
                     next_scheduled=next_scheduled,
                 )
@@ -341,7 +345,9 @@ class ScheduleService:
             show.anilist_id = m.get("id")
             show.mal_id = m.get("idMal")
             cover = m.get("coverImage") or {}
-            show.cover_image_url = cover.get("large") or cover.get("medium")
+            # Prefer AniList art when available, but keep the AnimeSchedule cover
+            # as a fallback rather than blanking it.
+            show.cover_image_url = cover.get("large") or cover.get("medium") or show.cover_image_url
             show.crunchyroll_url = show.crunchyroll_url or crunchyroll_url(m)
 
     async def _enrich_only(self, result: WeeklySchedule, year: int) -> WeeklySchedule:

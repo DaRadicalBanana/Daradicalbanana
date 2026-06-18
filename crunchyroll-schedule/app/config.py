@@ -31,6 +31,7 @@ class Settings:
     seasonal_ttl: int
     cache_dir: Path
     demo_mode: bool
+    img_base: str = "https://img.animeschedule.net/production/assets/public/img/"
 
     @property
     def has_token(self) -> bool:
@@ -57,6 +58,13 @@ def load_settings() -> Settings:
         seasonal_ttl=int(os.getenv("APP_SEASONAL_TTL", "86400")),
         cache_dir=Path(os.getenv("APP_CACHE_DIR", str(Path(__file__).resolve().parent.parent / ".cache"))),
         demo_mode=demo,
+        # Base URL prefix for AnimeSchedule cover images (entry.imageVersionRoute
+        # is appended). Configurable in case the CDN path changes; images fail
+        # gracefully in the UI if this is wrong.
+        img_base=os.getenv(
+            "ANIMESCHEDULE_IMG_BASE",
+            "https://img.animeschedule.net/production/assets/public/img/",
+        ),
     )
 
 

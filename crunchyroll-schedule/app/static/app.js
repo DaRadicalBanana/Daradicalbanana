@@ -138,7 +138,8 @@ function showRow(show, tz) {
   const star = `<button class="fav ${fav ? "on" : ""}" data-route="${escapeHtml(show.route)}"
     aria-pressed="${fav}" title="${fav ? "Unfavorite" : "Favorite"}">${fav ? "★" : "☆"}</button>`;
   const cover = show.cover_image_url
-    ? `<img src="${show.cover_image_url}" alt="" loading="lazy" />`
+    ? `<img src="${escapeHtml(show.cover_image_url)}" alt="" loading="lazy"
+         onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'noart'}))" />`
     : `<div class="noart"></div>`;
   const last = show.last_released
     ? `<div class="slot"><span class="lbl">Last</span> Ep ${epNum(show.last_released)} ·

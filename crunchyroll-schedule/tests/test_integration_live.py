@@ -144,6 +144,14 @@ def test_live_path_shows_have_last_and_next():
     assert both, "window aggregation should give last + next"
 
 
+def test_live_path_cover_from_image_route():
+    _, res = _run()
+    cr = next(s for s in res.shows if s.route == "cr-confirmed")
+    assert cr.cover_image_url is not None
+    assert cr.cover_image_url.endswith("anime/jpg/default/cr-confirmed.jpg")
+    assert cr.cover_image_url.startswith("https://")
+
+
 def test_live_path_ics_feed():
     _, res = _run()
     ics = build_ics(res)

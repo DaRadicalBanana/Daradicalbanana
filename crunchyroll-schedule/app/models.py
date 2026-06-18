@@ -36,6 +36,7 @@ class EpisodeRelease:
     delayed_from: datetime | None = None
     delayed_until: datetime | None = None
     streams: dict[str, str] = field(default_factory=dict)
+    image_route: str | None = None  # AnimeSchedule cover image path
 
     @property
     def on_crunchyroll(self) -> bool:
