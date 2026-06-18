@@ -7,6 +7,9 @@
   --jp: #d9a441;
 }
 * { box-sizing: border-box; }
+/* The `hidden` attribute must win over the display rules below (.calendar /
+   .showlist / .showcontrols set display, which would otherwise un-hide them). */
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
