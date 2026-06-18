@@ -32,13 +32,20 @@ documents the review and the hardening applied.
   degrade to cache/sample rather than erroring.
 - Server-side `asyncio.wait_for` + client fetch timeout prevent hangs.
 
+## Completed in later security runs
+- ✅ Input hardening: `/api/schedule` validates `year`/`week` (422 on bad input);
+  `/api/releases` clamps `anchor` to ±13 months (bounds fan-out/cache).
+- ✅ Abuse/DoS: per-IP fixed-window rate limit on `/api/*` (429 + Retry-After).
+- ✅ Supply chain: dependency upper bounds + `pip-audit --strict` CVE scan in CI.
+- ✅ Secret hygiene: scanned tracked files (only doc placeholders found); GitHub
+  native secret scanning applies to this public repo.
+
 ## Backlog for upcoming security runs
-- Input hardening: clamp/validate `year`/`week`/`anchor` to a sane window so odd
-  values can't trigger 500s or amplification; bound monthly fan-out.
-- Abuse/DoS: per-IP request throttling on the API; cap how far prev/next can page.
-- Supply chain: pin dependency versions and add a `pip-audit`/Dependabot check.
-- Repo hygiene: secret-scanning in CI on every push.
 - Tighten CSP `img-src` from `https:` to the specific image hosts.
+- Cap how far prev/next paging can go in the UI (defense in depth atop the
+  server-side anchor clamp).
+- Consider a `Strict-Transport-Security` header (Render terminates TLS).
+- Add a CI secret-scanner action (e.g. gitleaks) for defense in depth.
 
 ## Enabling debug safely
 `/api/debug` is off by default. To diagnose live data temporarily, set

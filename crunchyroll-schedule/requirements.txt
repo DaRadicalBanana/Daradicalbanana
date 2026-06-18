@@ -1,5 +1,6 @@
-fastapi>=0.110
-uvicorn[standard]>=0.29
-httpx>=0.27
-python-dotenv>=1.0
-qrcode>=7.4          # optional: QR code for opening the app on your phone
+# Upper bounds cap unreviewed major-version upgrades (supply-chain hygiene).
+fastapi>=0.110,<1.0
+uvicorn[standard]>=0.29,<1.0
+httpx>=0.27,<1.0
+python-dotenv>=1.0,<2.0
+qrcode>=7.4,<9.0     # optional: QR code for opening the app on your phone
