@@ -34,13 +34,29 @@ async function load() {
   return view === "shows" ? loadShows() : loadSchedule();
 }
 
+async function fetchWithTimeout(url, ms) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { cache: "no-store", signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function errMessage(err) {
+  return err && err.name === "AbortError"
+    ? "timed out — the server may be waking up (free tier). Tap Retry."
+    : err.message;
+}
+
 async function loadSchedule() {
   const p = new URLSearchParams({ range, air_type: airType });
   if (anchor) p.set("anchor", anchor);
   setStatus("Loading…");
   if (!lastSchedule) showOverlay("Loading the schedule… (first load can take ~30–50s while the server wakes up)");
   try {
-    const res = await fetch(`/api/releases?${p}`, { cache: "no-store" });
+    const res = await fetchWithTimeout(`/api/releases?${p}`, 40000);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     lastSchedule = data;
@@ -48,8 +64,8 @@ async function loadSchedule() {
     setStatus("");
     renderSchedule(data);
   } catch (err) {
-    setStatus(`Couldn't load schedule (${err.message}).`, true);
-    showOverlay(`Couldn't load the schedule (${escapeHtml(err.message)}).`, true);
+    setStatus(`Couldn't load schedule (${errMessage(err)})`, true);
+    showOverlay(`Couldn't load the schedule (${escapeHtml(errMessage(err))})`, true);
   }
 }
 
@@ -57,15 +73,15 @@ async function loadShows() {
   const p = new URLSearchParams({ air_type: airType });
   setStatus("Loading…");
   try {
-    const res = await fetch(`/api/schedule?${p}`, { cache: "no-store" });
+    const res = await fetchWithTimeout(`/api/schedule?${p}`, 40000);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     lastShows = data;
     setStatus("");
     renderShows(data);
   } catch (err) {
-    setStatus(`Couldn't load shows (${err.message}).`, true);
-    showOverlay(`Couldn't load shows (${escapeHtml(err.message)}).`, true);
+    setStatus(`Couldn't load shows (${errMessage(err)})`, true);
+    showOverlay(`Couldn't load shows (${escapeHtml(errMessage(err))})`, true);
   }
 }
 

@@ -6,6 +6,7 @@ Then open http://127.0.0.1:8000
 """
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 from pathlib import Path
 
@@ -45,7 +46,10 @@ async def schedule(
     if year is None or week is None:
         iw = current_iso_week(settings.timezone)
         year, week = iw.year, iw.week
-    data = await _service.weekly(year, week, air_type)
+    try:
+        data = await asyncio.wait_for(_service.weekly(year, week, air_type), timeout=30)
+    except asyncio.TimeoutError:
+        return JSONResponse({"error": "upstream timeout"}, status_code=503)
     # Short client cache so a phone refreshing / re-focusing doesn't hammer the
     # backend; the app also auto-refreshes every 5 min.
     return JSONResponse(to_jsonable(data), headers={"Cache-Control": "private, max-age=60"})
@@ -68,7 +72,10 @@ async def releases(
         anc = None
     if anc is None:
         anc = datetime.now(ZoneInfo(settings.timezone)).date()
-    data = await _service.schedule_view(range, anc, air_type)
+    try:
+        data = await asyncio.wait_for(_service.schedule_view(range, anc, air_type), timeout=30)
+    except asyncio.TimeoutError:
+        return JSONResponse({"error": "upstream timeout"}, status_code=503)
     return JSONResponse(to_jsonable(data), headers={"Cache-Control": "private, max-age=60"})
 
 
