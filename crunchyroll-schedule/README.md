@@ -37,7 +37,13 @@ full weekly calendar from sample data (clearly banner-labelled "SAMPLE DATA"),
 exercising the real pipeline — CR filtering, sub→raw fallback flags, last/next,
 multi-episode drops, delays. Force it on/off with `APP_DEMO=1` / `APP_DEMO=0`.
 
-## Open it on your phone
+## Put it online (easiest for phone use)
+
+To open the app on your phone anytime without leaving a computer running, deploy
+it free to Render — see **[DEPLOY.md](DEPLOY.md)**. You connect this GitHub repo
+in a few taps and get a permanent `https://…onrender.com` link.
+
+## Open it on your phone (run locally)
 
 Run this on your computer (e.g. your Mac) with your phone on the **same Wi-Fi**:
 

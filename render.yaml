@@ -1,0 +1,22 @@
+# Render.com Blueprint — deploys the Crunchyroll schedule app as a free web
+# service. In Render: New + -> Blueprint -> connect this repo -> Apply.
+# See crunchyroll-schedule/DEPLOY.md for step-by-step instructions.
+services:
+  - type: web
+    name: crunchyroll-schedule
+    runtime: python
+    plan: free
+    # The app lives in a subdirectory of this repo.
+    rootDir: crunchyroll-schedule
+    # Deploy the branch the app currently lives on.
+    branch: claude/anime-release-schedule-xzwrr7
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: APP_TIMEZONE
+        value: America/New_York
+      # No ANIMESCHEDULE_TOKEN here on purpose: the app runs in demo mode
+      # (sample data) until you add that secret in the Render dashboard, at
+      # which point it automatically switches to live Crunchyroll timing.
