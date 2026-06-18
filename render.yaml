@@ -5,7 +5,9 @@ services:
   - type: web
     name: crunchyroll-schedule
     runtime: python
-    plan: free
+    # Starter instance: always-warm (no spin-down) + zero-downtime deploys, so
+    # frequent commits don't cause cold starts or restart downtime.
+    plan: starter
     # The app lives in a subdirectory of this repo.
     rootDir: crunchyroll-schedule
     # Deploy the branch the app currently lives on.
