@@ -152,6 +152,38 @@ def test_live_path_cover_from_image_route():
     assert cr.cover_image_url.startswith("https://")
 
 
+def test_schedule_view_weekly_concurrent():
+    from datetime import datetime as _dt
+    from zoneinfo import ZoneInfo
+    svc = _live_service()
+    anchor = _dt.now(ZoneInfo(TZ)).date()
+    res = asyncio.run(svc.schedule_view("weekly", anchor, "sub"))
+    assert res.range == "weekly" and res.air_type == "sub"
+    assert len(res.groups) == 7
+    assert sum(len(g.releases) for g in res.groups) > 0
+    assert res.prev_anchor and res.next_anchor
+    assert not any(f.source == "sample" for f in res.freshness)
+
+
+def test_schedule_view_tolerates_failing_week():
+    from datetime import datetime as _dt
+    from zoneinfo import ZoneInfo
+    svc = _live_service()
+    good = svc.animeschedule.timetable
+
+    async def flaky(air_type, year, week, tz):
+        if week % 2 == 0:
+            raise RuntimeError("simulated upstream failure")
+        return await good(air_type, year, week, tz)
+
+    svc.animeschedule.timetable = flaky
+    anchor = _dt.now(ZoneInfo(TZ)).date()
+    res = asyncio.run(svc.schedule_view("monthly", anchor, "sub"))
+    # Failure on some weeks is surfaced but the view still returns.
+    assert any("unavailable" in w for w in res.warnings)
+    assert isinstance(res.groups, list)
+
+
 def test_live_path_ics_feed():
     _, res = _run()
     ics = build_ics(res)

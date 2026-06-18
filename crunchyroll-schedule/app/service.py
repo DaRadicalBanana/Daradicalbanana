@@ -15,6 +15,7 @@ blocks egress to animeschedule.net. scripts/verify_step2.py exists to confirm it
 """
 from __future__ import annotations
 
+import asyncio
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -230,13 +231,19 @@ class ScheduleService:
         is_sample = False
         seen: set = set()
         by_date: dict[date, list[EpisodeRelease]] = {}
-        for iw in _weeks_for_bounds(start, end):
-            try:
-                entries, sample = await self._week_cr_entries(air_type, iw.year, iw.week)
-                is_sample = is_sample or sample
-            except Exception as exc:
-                view.warnings.append(f"AnimeSchedule unavailable for {iw}: {exc}")
+        weeks = _weeks_for_bounds(start, end)
+        # Fetch the weeks concurrently (Monthly spans ~5 weeks); the rate limiter
+        # still bounds actual request concurrency.
+        results = await asyncio.gather(
+            *(self._week_cr_entries(air_type, iw.year, iw.week) for iw in weeks),
+            return_exceptions=True,
+        )
+        for iw, res in zip(weeks, results):
+            if isinstance(res, Exception):
+                view.warnings.append(f"AnimeSchedule unavailable for {iw}: {res}")
                 continue
+            entries, sample = res
+            is_sample = is_sample or sample
             for e in entries:
                 if not e.air_at:
                     continue
