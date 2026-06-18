@@ -16,7 +16,7 @@ from .config import settings
 from .ics import build_ics
 from .isoweek import current_iso_week
 from .models import to_jsonable
-from .service import ScheduleService, _stream_census
+from .service import ScheduleService, _normalize_entry, _stream_census, is_crunchyroll
 
 app = FastAPI(title="Crunchyroll Weekly Schedule", version="0.1.0")
 _service = ScheduleService(settings)
@@ -65,10 +65,25 @@ async def debug(air_type: str = Query(default="sub")) -> JSONResponse:
         sub_raw, meta = await _service.animeschedule.timetable(air_type, iw.year, iw.week, settings.timezone)
         sub_raw = sub_raw or []
         out["sub_entry_count"] = len(sub_raw)
-        out["sub_sample_entry"] = sub_raw[0] if sub_raw else None
         out["response_is_list"] = isinstance(sub_raw, list)
         out["census"] = _stream_census(sub_raw, [])
         out["fetched_at"] = meta.fetched_at.isoformat() if meta and meta.fetched_at else None
+
+        # Parsed result: the real pipeline applied to live data. cr_match_count > 0
+        # is the live "it works" signal.
+        cr = [e for e in (_normalize_entry(x) for x in sub_raw) if is_crunchyroll(e)]
+        out["cr_match_count"] = len(cr)
+        out["cr_sample"] = (
+            {
+                "route": cr[0].route,
+                "title": cr[0].title,
+                "episode": cr[0].episode_number,
+                "air_at_utc": cr[0].air_at.isoformat() if cr[0].air_at else None,
+                "crunchyroll_url": cr[0].streams.get("crunchyroll"),
+            }
+            if cr
+            else None
+        )
     except Exception as exc:  # surface the failure rather than 500
         out["error"] = f"{type(exc).__name__}: {exc}"
     return JSONResponse(out)
