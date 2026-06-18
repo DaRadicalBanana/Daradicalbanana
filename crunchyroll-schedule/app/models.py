@@ -75,6 +75,7 @@ class WeeklySchedule:
     shows: list[Show] = field(default_factory=list)
     freshness: list[Freshness] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    diagnostics: dict = field(default_factory=dict)
 
 
 def to_jsonable(obj: Any) -> Any:

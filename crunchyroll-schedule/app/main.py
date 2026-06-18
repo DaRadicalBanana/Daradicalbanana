@@ -16,7 +16,7 @@ from .config import settings
 from .ics import build_ics
 from .isoweek import current_iso_week
 from .models import to_jsonable
-from .service import ScheduleService
+from .service import ScheduleService, _stream_census
 
 app = FastAPI(title="Crunchyroll Weekly Schedule", version="0.1.0")
 _service = ScheduleService(settings)
@@ -48,6 +48,30 @@ async def schedule(
     # Short client cache so a phone refreshing / re-focusing doesn't hammer the
     # backend; the app also auto-refreshes every 5 min.
     return JSONResponse(to_jsonable(data), headers={"Cache-Control": "private, max-age=60"})
+
+
+@app.get("/api/debug")
+async def debug(air_type: str = Query(default="sub")) -> JSONResponse:
+    """Raw look at the live timetable response (no secrets) to diagnose parsing.
+    Returns the first sub/raw entries verbatim plus a stream-key census."""
+    iw = current_iso_week(settings.timezone)
+    out: dict = {
+        "week": [iw.year, iw.week],
+        "tz": settings.timezone,
+        "demo_mode": settings.demo_mode,
+        "token_present": settings.has_token,
+    }
+    try:
+        sub_raw, meta = await _service.animeschedule.timetable(air_type, iw.year, iw.week, settings.timezone)
+        sub_raw = sub_raw or []
+        out["sub_entry_count"] = len(sub_raw)
+        out["sub_sample_entry"] = sub_raw[0] if sub_raw else None
+        out["response_is_list"] = isinstance(sub_raw, list)
+        out["census"] = _stream_census(sub_raw, [])
+        out["fetched_at"] = meta.fetched_at.isoformat() if meta and meta.fetched_at else None
+    except Exception as exc:  # surface the failure rather than 500
+        out["error"] = f"{type(exc).__name__}: {exc}"
+    return JSONResponse(out)
 
 
 @app.get("/api/calendar.ics")

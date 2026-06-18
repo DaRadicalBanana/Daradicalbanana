@@ -57,6 +57,7 @@ h1 { font-size: 1.3rem; margin: 0 0 .5rem; }
 .day h2 { font-size: .85rem; margin: 0 0 .5rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .day.today h2 { color: var(--accent); }
 .day .empty { color: #555b68; font-size: .8rem; font-style: italic; }
+.empty.wide { grid-column: 1 / -1; color: var(--muted); padding: 1.2rem; text-align: center; }
 .ep.past { opacity: .62; }
 .ep .rel { color: var(--muted); font-size: .72rem; }
 

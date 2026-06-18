@@ -114,6 +114,11 @@ function epCard(ep, tz) {
 function renderWeek(data) {
   const cal = document.getElementById("calendar");
   cal.innerHTML = "";
+  const total = Object.values(data.days || {}).reduce((n, a) => n + a.length, 0);
+  if (total === 0) {
+    cal.innerHTML = `<div class="empty wide">No Crunchyroll releases found for ${data.iso_year} · week ${data.iso_week}.</div>`;
+    return;
+  }
   const isCurrentWeek = data.is_current_week;
   const today = localTodayParts(data.timezone).weekday;
   for (let wd = 0; wd < 7; wd++) {

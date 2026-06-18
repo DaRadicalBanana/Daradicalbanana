@@ -39,6 +39,49 @@ WINDOW_BEFORE = 1
 WINDOW_AFTER = 2
 
 
+def _stream_census(sub_raw: list[dict], cr_entries: list) -> dict:
+    """Inspect the live timetable response to explain why nothing matched.
+
+    Surfaces the actual stream-key names, field names, streams shape, and a
+    sample EpisodeDate so the real response shape can be seen without API access.
+    """
+    keys: set[str] = set()
+    shape = "absent"
+    sample_streams = None
+    sample_fields: list[str] = []
+    sample_date = None
+    for e in sub_raw[:300]:
+        s = pick(e, "streams")
+        if isinstance(s, dict):
+            shape = "dict"
+            keys.update(map(str, s.keys()))
+            if sample_streams is None:
+                sample_streams = s
+        elif isinstance(s, list):
+            shape = "list"
+            for item in s:
+                if isinstance(item, dict):
+                    keys.update(map(str, item.keys()))
+                else:
+                    keys.add(str(item))
+            if sample_streams is None:
+                sample_streams = s[:2]
+    if sub_raw:
+        first = sub_raw[0]
+        if isinstance(first, dict):
+            sample_fields = sorted(first.keys())
+        sample_date = pick(first, "episodeDate")
+    return {
+        "entry_count": len(sub_raw),
+        "cr_match_count": len(cr_entries),
+        "streams_shape": shape,
+        "stream_keys": sorted(keys)[:40],
+        "sample_fields": sample_fields[:50],
+        "sample_streams": sample_streams,
+        "sample_date": sample_date,
+    }
+
+
 def _normalize_entry(raw: dict) -> EpisodeRelease:
     streams = pick(raw, "streams", default={}) or {}
     return EpisodeRelease(
@@ -198,6 +241,21 @@ class ScheduleService:
             result.warnings.append(
                 "Some episodes show JP broadcast time (CR sub time unconfirmed)."
             )
+
+        # ---- diagnostics when live data returned but nothing rendered ----
+        if source != "sample" and not result.shows and not any(result.days.values()):
+            result.diagnostics = _stream_census(sub_raw, week_entries)
+            d = result.diagnostics
+            result.warnings.append(
+                f"DEBUG: {d['entry_count']} entries fetched, {len(week_entries)} matched a "
+                f"'crunchyroll' stream."
+            )
+            result.warnings.append(f"DEBUG: stream keys seen = {d['stream_keys']}")
+            result.warnings.append(f"DEBUG: sample entry fields = {d['sample_fields']}")
+            result.warnings.append(
+                f"DEBUG: streams shape={d['streams_shape']} sample={d['sample_streams']}"
+            )
+            result.warnings.append(f"DEBUG: sample EpisodeDate = {d['sample_date']!r}")
         return result
 
     def _demo_weekly(self, result: WeeklySchedule, reason: str | None = None) -> WeeklySchedule:
