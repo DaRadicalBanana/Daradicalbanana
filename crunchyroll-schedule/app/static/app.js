@@ -19,7 +19,11 @@ const isFav = (route) => favorites.has(route);
 function toggleFav(route) {
   if (favorites.has(route)) favorites.delete(route); else favorites.add(route);
   localStorage.setItem("favorites", JSON.stringify([...favorites]));
-  if (lastShows) renderShows(lastShows);
+  rerender();
+}
+function rerender() {
+  if (view === "schedule" && lastSchedule) renderSchedule(lastSchedule);
+  else if (view === "shows" && lastShows) renderShows(lastShows);
 }
 function calendarHref() {
   const p = new URLSearchParams({ air_type: airType });
@@ -154,6 +158,18 @@ function wireImages(container) {
 function englishLine(ep) {
   return ep.english_title ? `<div class="english">${escapeHtml(ep.english_title)}</div>` : "";
 }
+function favStar(route) {
+  const f = isFav(route);
+  return `<button class="fav ${f ? "on" : ""}" data-route="${escapeHtml(route)}"
+    aria-pressed="${f}" aria-label="${f ? "Unfavorite" : "Favorite"}" title="${f ? "Unfavorite" : "Favorite"}">${f ? "★" : "☆"}</button>`;
+}
+// title match against the search box (title or english)
+function matchesFilter(item) {
+  if (favOnly && !isFav(item.route)) return false;
+  if (!search) return true;
+  const q = search.toLowerCase();
+  return item.title.toLowerCase().includes(q) || (item.english_title || "").toLowerCase().includes(q);
+}
 
 // ---- schedule (range) view ----
 function epCard(ep, tz) {
@@ -161,7 +177,7 @@ function epCard(ep, tz) {
   return `<div class="ep ${past ? "past" : "upcoming"}">
     ${coverImg(ep.cover_image_url, "ep-thumb")}
     <div class="meta">
-      <div class="title">${escapeHtml(ep.title)}</div>
+      <div class="title">${favStar(ep.route)} ${escapeHtml(ep.title)}</div>
       ${englishLine(ep)}
       <div>Ep ${epNum(ep)} · <span class="time">${fmtClock(ep.air_at, tz)}</span>
         <span class="rel">(${relative(ep.air_at)})</span></div>
@@ -178,10 +194,16 @@ function renderSchedule(data) {
   document.getElementById("tz").textContent = data.timezone;
   setMeta(data);
   const cal = document.getElementById("calendar");
-  const groups = data.groups || [];
+  const filterActive = !!search || favOnly;
+  let groups = (data.groups || []).map((g) => ({
+    ...g,
+    releases: g.releases.filter(matchesFilter),
+  }));
+  if (filterActive) groups = groups.filter((g) => g.releases.length > 0);
   const total = groups.reduce((n, g) => n + g.releases.length, 0);
   if (total === 0) {
-    cal.innerHTML = `<div class="empty wide">No Crunchyroll releases for ${escapeHtml(data.title)}.</div>`;
+    const why = filterActive ? "match your filter" : `release for ${escapeHtml(data.title)}`;
+    cal.innerHTML = `<div class="empty wide">No Crunchyroll releases ${filterActive ? "" : ""}${why}.</div>`;
     return;
   }
   cal.innerHTML = groups
@@ -198,10 +220,7 @@ function renderSchedule(data) {
 
 // ---- shows view ----
 function showRow(show, tz) {
-  const fav = isFav(show.route);
-  const star = `<button class="fav ${fav ? "on" : ""}" data-route="${escapeHtml(show.route)}"
-    aria-pressed="${fav}" aria-label="${fav ? "Unfavorite" : "Favorite"}" title="${fav ? "Unfavorite" : "Favorite"}">${fav ? "★" : "☆"}</button>`;
-  const cover = coverImg(show.cover_image_url, "noart-or-img") || `<div class="noart"></div>`;
+  const star = favStar(show.route);
   const eng = show.english_title ? `<div class="english">${escapeHtml(show.english_title)}</div>` : "";
   const last = show.last_released
     ? `<div class="slot"><span class="lbl">Last</span> Ep ${epNum(show.last_released)} ·
@@ -226,10 +245,7 @@ function renderShows(data) {
   document.getElementById("rangelabel").textContent = "All current shows";
   document.getElementById("tz").textContent = data.timezone;
   setMeta(data);
-  let shows = (data.shows || []).slice();
-  if (favOnly) shows = shows.filter((s) => isFav(s.route));
-  if (search) { const q = search.toLowerCase(); shows = shows.filter((s) =>
-    s.title.toLowerCase().includes(q) || (s.english_title || "").toLowerCase().includes(q)); }
+  let shows = (data.shows || []).filter(matchesFilter);
   shows.sort((a, b) => {
     const an = a.next_scheduled?.air_at, bn = b.next_scheduled?.air_at;
     if (an && bn) return new Date(an) - new Date(bn);
@@ -271,7 +287,8 @@ function applyView() {
   const sched = view === "schedule";
   document.getElementById("calendar").hidden = !sched;
   document.getElementById("showlist").hidden = sched;
-  document.getElementById("showcontrols").hidden = sched;
+  // search + favorites filter both views
+  document.getElementById("showcontrols").hidden = false;
   // range + week nav only apply to the schedule view
   document.getElementById("range").hidden = !sched;
   document.getElementById("prev").hidden = !sched;
@@ -308,17 +325,20 @@ document.getElementById("at-sub").addEventListener("click", () => setAirType("su
 document.getElementById("at-dub").addEventListener("click", () => setAirType("dub"));
 
 document.getElementById("search").addEventListener("input", (e) => {
-  search = e.target.value.trim(); if (lastShows) renderShows(lastShows);
+  search = e.target.value.trim(); rerender();
 });
 const favOnlyEl = document.getElementById("favonly");
 favOnlyEl.checked = favOnly;
 favOnlyEl.addEventListener("change", (e) => {
   favOnly = e.target.checked; localStorage.setItem("favonly", favOnly ? "1" : "0");
-  if (lastShows) renderShows(lastShows);
+  rerender();
 });
-document.getElementById("showlist").addEventListener("click", (e) => {
-  const btn = e.target.closest(".fav"); if (btn) toggleFav(btn.dataset.route);
-});
+// favorite-star clicks in either view
+for (const id of ["showlist", "calendar"]) {
+  document.getElementById(id).addEventListener("click", (e) => {
+    const btn = e.target.closest(".fav"); if (btn) toggleFav(btn.dataset.route);
+  });
+}
 
 // re-render relative times each minute (no refetch); auto-refresh + on focus
 setInterval(() => {
