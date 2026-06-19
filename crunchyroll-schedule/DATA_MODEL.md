@@ -155,3 +155,26 @@ detectability **could not be run here**. To unblock:
 Until then the code is deliberately defensive: `parsing.pick()` accepts both
 casings and `parse_dt()` maps the zero sentinel to `None`, so it will work
 whichever way the live API actually behaves.
+
+## `/anime` endpoint shape (confirmed live, 2026-06-19)
+
+`GET /api/v3/anime?streams=crunchyroll&page=1` returns an OBJECT:
+`{ "page", "totalAmount", "anime": [ {record}, ... ] }`.
+
+Each record (joined to timetable entries by **`route`**) includes:
+- `id` (AnimeSchedule's own id, e.g. "urTI" — NOT AniList), `route`, `title`,
+  `names` {native, abbreviation, synonyms}
+- `imageVersionRoute` (cover, same as timetable), `lengthMin`, `mediaTypes`,
+  `genres`, `studios`, `sources`, `description`, `status`, `season`
+- timing: `jpnTime`, `subTime`, `dubTime`, `premier`/`subPremier`/`dubPremier`,
+  delay fields, `episodeOverride`/`subEpisodeOverride`/`dubEpisodeOverride`
+- **`websites`** — external links AS URL STRINGS (no integer IDs):
+  `{ official, mal: "myanimelist.net/anime/<MALID>/...",
+     aniList: "anilist.co/anime/<ANILISTID>/...", kitsu, animePlanet,
+     anidb: "anidb.net/anime/<ID>", streams: [ {platform,name,url}, ... ] }`
+
+Implication: AnimeSchedule's own `/anime` already carries the AniList/MAL/AniDB
+IDs (parse them out of the `websites` URLs) plus rich metadata, all keyed by
+`route` — so the "AniList ID join" needs NO AniList GraphQL call; enrich by route
+from `/anime`. Parse `anilist.co/anime/(\d+)` and `myanimelist.net/anime/(\d+)`
+for the IDs. (Fetch strategy for per-show detail still TBD — see notes.)
