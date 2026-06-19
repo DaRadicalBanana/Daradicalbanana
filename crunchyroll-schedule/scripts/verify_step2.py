@@ -31,7 +31,7 @@ import httpx
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.isoweek import current_iso_week, iso_week_of  # noqa: E402
-from app.parsing import detect_casing, parse_dt, pick  # noqa: E402
+from app.parsing import detect_casing, normalize_streams, parse_dt, pick  # noqa: E402
 
 BASE = "https://animeschedule.net/api/v3"
 TZ = os.getenv("APP_TIMEZONE", "America/New_York")
@@ -79,7 +79,7 @@ def report_week(label: str, year: int, week: int, token: str) -> None:
         return (pick(e, "route"), pick(e, "episodeNumber"))
 
     raw_index = {key(e): pick(e, "episodeDate") for e in raw}
-    cr = [e for e in sub if any(k.lower() == "crunchyroll" for k in (pick(e, "streams") or {}))]
+    cr = [e for e in sub if "crunchyroll" in normalize_streams(pick(e, "streams"))]
     confirmed = fallback = 0
     for e in cr:
         sub_dt = pick(e, "episodeDate")
