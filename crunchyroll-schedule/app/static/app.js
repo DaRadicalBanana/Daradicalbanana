@@ -134,6 +134,12 @@ function delayBadge(ep) {
     ? `<span class="badge delayed" title="AnimeSchedule marks this episode delayed">delayed</span>`
     : "";
 }
+function premiereBadge(ep) {
+  // Episode 1 (and not a multi-ep catch-up drop) = series/season premiere.
+  return ep.episode_number === 1 && !ep.subtracted_episode_number
+    ? `<span class="badge premiere" title="First episode">premiere</span>`
+    : "";
+}
 function epNum(ep) {
   return ep.subtracted_episode_number
     ? `${ep.subtracted_episode_number}–${ep.episode_number}`
@@ -190,7 +196,7 @@ function epCard(ep, tz) {
       ${englishLine(ep)}
       <div>${epLabel(ep)} · <span class="time">${fmtClock(ep.air_at, tz)}</span>
         <span class="rel">(${relative(ep.air_at)})</span></div>
-      <div>${delayBadge(ep)} ${badge(ep.confidence)} ${watchLink(ep)}</div>
+      <div>${premiereBadge(ep)} ${delayBadge(ep)} ${badge(ep.confidence)} ${watchLink(ep)}</div>
     </div>
   </div>`;
 }
@@ -220,8 +226,11 @@ function renderSchedule(data) {
       const body = g.releases.length
         ? g.releases.map((e) => epCard(e, data.timezone)).join("")
         : `<div class="empty">No releases</div>`;
+      const count = g.releases.length
+        ? ` <span class="daycount">${g.releases.length}</span>`
+        : "";
       return `<section class="daygroup${g.is_today ? " today" : ""}">
-        <h2 class="dayhdr">${escapeHtml(g.label)}</h2>${body}</section>`;
+        <h2 class="dayhdr">${escapeHtml(g.label)}${count}</h2>${body}</section>`;
     })
     .join("");
   wireImages(cal);
