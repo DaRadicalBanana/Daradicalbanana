@@ -61,11 +61,19 @@ def test_schedule_rejects_out_of_range_params():
 
 
 def test_releases_clamps_far_anchor():
-    # A far-future anchor is clamped (no 500, no unbounded fan-out).
+    # A far-future anchor is clamped (no 500, no unbounded fan-out) and paging
+    # forward is disabled at the bound.
     r = c.get("/api/releases?range=monthly&anchor=9999-01-01")
     assert r.status_code == 200
-    anchor = r.json()["anchor"]
-    assert anchor < "9999-01-01"  # clamped toward today
+    body = r.json()
+    assert body["anchor"] < "9999-01-01"  # clamped toward today
+    assert body["has_next"] is False  # can't page past the window
+    # a far-past anchor disables paging backward
+    past = c.get("/api/releases?range=monthly&anchor=1000-01-01").json()
+    assert past["has_prev"] is False
+    # today is freely navigable both ways
+    now = c.get("/api/releases?range=daily").json()
+    assert now["has_prev"] is True and now["has_next"] is True
     # malformed anchor falls back to today (still 200)
     assert c.get("/api/releases?range=daily&anchor=not-a-date").status_code == 200
 

@@ -173,6 +173,8 @@ function epCard(ep, tz) {
 function renderSchedule(data) {
   document.getElementById("range").value = data.range;
   document.getElementById("rangelabel").textContent = data.title;
+  document.getElementById("prev").disabled = data.has_prev === false;
+  document.getElementById("next").disabled = data.has_next === false;
   document.getElementById("tz").textContent = data.timezone;
   setMeta(data);
   const cal = document.getElementById("calendar");

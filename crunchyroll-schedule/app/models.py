@@ -101,6 +101,8 @@ class ScheduleView:
     title: str          # human label for the current range
     prev_anchor: str    # anchor for the previous range step
     next_anchor: str    # anchor for the next range step
+    has_prev: bool = True
+    has_next: bool = True
     groups: list[DayGroup] = field(default_factory=list)
     shows: list[Show] = field(default_factory=list)
     freshness: list[Freshness] = field(default_factory=list)

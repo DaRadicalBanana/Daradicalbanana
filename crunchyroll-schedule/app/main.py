@@ -114,20 +114,17 @@ async def releases(
 ) -> JSONResponse:
     """Daily / Weekly / Monthly schedule of releases grouped by date.
     `anchor` (YYYY-MM-DD) defaults to today in the app timezone."""
-    from datetime import date as _date, timedelta as _td
+    from datetime import date as _date
     from zoneinfo import ZoneInfo
 
     try:
         anc = _date.fromisoformat(anchor) if anchor else None
     except ValueError:
         anc = None
-    today = datetime.now(ZoneInfo(settings.timezone)).date()
     if anc is None:
-        anc = today
-    # Clamp the anchor to ~±13 months so paging can't fan out to arbitrary dates
-    # (bounds upstream calls and cache growth).
-    lo, hi = today - _td(days=400), today + _td(days=400)
-    anc = max(lo, min(hi, anc))
+        anc = datetime.now(ZoneInfo(settings.timezone)).date()
+    # schedule_view clamps the anchor to its navigable window (single source of
+    # truth) and reports has_prev/has_next.
     try:
         data = await asyncio.wait_for(_service.schedule_view(range, anc, air_type), timeout=30)
     except asyncio.TimeoutError:

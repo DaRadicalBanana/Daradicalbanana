@@ -42,6 +42,7 @@ WINDOW_BEFORE = 1
 WINDOW_AFTER = 2
 
 RANGES = ("daily", "weekly", "monthly")
+PAGING_WINDOW_DAYS = 400  # how far prev/next may page from today
 
 
 def _month_bounds(anchor: date) -> tuple[date, date]:
@@ -217,15 +218,23 @@ class ScheduleService:
         tz = self.settings.timezone
         local = ZoneInfo(tz)
         today = datetime.now(local).date()
+        # Single source of truth for the navigable window (bounds upstream fan-out
+        # and cache growth); the UI disables prev/next at the edges.
+        lo, hi = today - timedelta(days=PAGING_WINDOW_DAYS), today + timedelta(days=PAGING_WINDOW_DAYS)
+        anchor = max(lo, min(hi, anchor))
         start, end = _range_bounds(range_kind, anchor)
+        prev_a = _shift_anchor(range_kind, anchor, -1)
+        next_a = _shift_anchor(range_kind, anchor, +1)
         view = ScheduleView(
             range=range_kind,
             anchor=anchor.isoformat(),
             timezone=tz,
             air_type=air_type,
             title=_range_title(range_kind, anchor, start, end, today),
-            prev_anchor=_shift_anchor(range_kind, anchor, -1).isoformat(),
-            next_anchor=_shift_anchor(range_kind, anchor, +1).isoformat(),
+            prev_anchor=prev_a.isoformat(),
+            next_anchor=next_a.isoformat(),
+            has_prev=prev_a >= lo,
+            has_next=next_a <= hi,
         )
 
         is_sample = False
