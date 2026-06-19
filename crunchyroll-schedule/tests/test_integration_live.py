@@ -144,6 +144,13 @@ def test_live_path_shows_have_last_and_next():
     assert both, "window aggregation should give last + next"
 
 
+def test_live_path_total_episodes():
+    _, res = _run()
+    cr = next(s for s in res.shows if s.route == "cr-confirmed")
+    ep = cr.next_scheduled or cr.last_released
+    assert ep.total_episodes == 12  # from the entry's `episodes` field
+
+
 def test_live_path_cover_from_image_route():
     _, res = _run()
     cr = next(s for s in res.shows if s.route == "cr-confirmed")

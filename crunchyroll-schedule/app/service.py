@@ -151,6 +151,7 @@ def _normalize_entry(raw: dict) -> EpisodeRelease:
         subtracted_episode_number=_as_int(pick(raw, "subtractedEpisodeNumber")),
         air_at=parse_dt(pick(raw, "episodeDate")),
         confidence=TimeConfidence.UNKNOWN,  # set later
+        total_episodes=(_as_int(pick(raw, "episodes")) or None),
         length_min=_as_int(pick(raw, "lengthMin")),
         airing_status=pick(raw, "airingStatus", "status"),
         delayed_from=parse_dt(pick(raw, "delayedFrom")),

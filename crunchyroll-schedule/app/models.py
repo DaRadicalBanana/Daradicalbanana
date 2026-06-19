@@ -32,6 +32,7 @@ class EpisodeRelease:
     air_at: datetime | None         # aware UTC; None if no known time
     confidence: TimeConfidence
     english_title: str | None = None  # English title shown under the romaji/JP one
+    total_episodes: int | None = None  # season total (0/unknown -> None)
     length_min: int | None = None
     airing_status: str | None = None
     delayed_from: datetime | None = None

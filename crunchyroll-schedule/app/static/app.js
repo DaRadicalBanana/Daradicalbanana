@@ -134,6 +134,10 @@ function epNum(ep) {
     ? `${ep.subtracted_episode_number}–${ep.episode_number}`
     : ep.episode_number ?? "?";
 }
+// "Ep 6 / 12" (or "Ep 11–12 / 12"); omits the total when unknown
+function epLabel(ep) {
+  return `Ep ${epNum(ep)}${ep.total_episodes ? ` / ${ep.total_episodes}` : ""}`;
+}
 function watchLink(ep) {
   const url = ep && ep.streams && ep.streams.crunchyroll;
   return url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">Watch ↗</a>` : "";
@@ -179,7 +183,7 @@ function epCard(ep, tz) {
     <div class="meta">
       <div class="title">${favStar(ep.route)} ${escapeHtml(ep.title)}</div>
       ${englishLine(ep)}
-      <div>Ep ${epNum(ep)} · <span class="time">${fmtClock(ep.air_at, tz)}</span>
+      <div>${epLabel(ep)} · <span class="time">${fmtClock(ep.air_at, tz)}</span>
         <span class="rel">(${relative(ep.air_at)})</span></div>
       <div>${badge(ep.confidence)} ${watchLink(ep)}</div>
     </div>
@@ -223,12 +227,12 @@ function showRow(show, tz) {
   const star = favStar(show.route);
   const eng = show.english_title ? `<div class="english">${escapeHtml(show.english_title)}</div>` : "";
   const last = show.last_released
-    ? `<div class="slot"><span class="lbl">Last</span> Ep ${epNum(show.last_released)} ·
+    ? `<div class="slot"><span class="lbl">Last</span> ${epLabel(show.last_released)} ·
         <span class="time">${fmtClock(show.last_released.air_at, tz)}</span>
         <span class="rel">(${relative(show.last_released.air_at)})</span></div>`
     : `<div class="slot muted">No released episode this week</div>`;
   const next = show.next_scheduled
-    ? `<div class="slot next"><span class="lbl">Next</span> Ep ${epNum(show.next_scheduled)} ·
+    ? `<div class="slot next"><span class="lbl">Next</span> ${epLabel(show.next_scheduled)} ·
         <span class="time">${fmtClock(show.next_scheduled.air_at, tz)}</span>
         <span class="rel">(${relative(show.next_scheduled.air_at)})</span> ${badge(show.next_scheduled.confidence)}</div>`
     : `<div class="slot muted">No upcoming episode this week</div>`;
