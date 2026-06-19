@@ -33,6 +33,7 @@ class EpisodeRelease:
     confidence: TimeConfidence
     english_title: str | None = None  # English title shown under the romaji/JP one
     total_episodes: int | None = None  # season total (0/unknown -> None)
+    media_type: str | None = None      # e.g. "TV", "Movie", "ONA"
     length_min: int | None = None
     airing_status: str | None = None
     delayed_from: datetime | None = None

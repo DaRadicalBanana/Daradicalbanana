@@ -143,6 +143,12 @@ def _stream_census(sub_raw: list[dict], cr_entries: list) -> dict:
 def _normalize_entry(raw: dict) -> EpisodeRelease:
     title = pick(raw, "title", "romaji", "english", default="") or ""
     english = pick(raw, "english") or None
+    mt = pick(raw, "mediaTypes")
+    media_type = None
+    if isinstance(mt, list) and mt and isinstance(mt[0], dict):
+        media_type = mt[0].get("name")
+    elif isinstance(mt, str):
+        media_type = mt
     return EpisodeRelease(
         route=pick(raw, "route", default="") or "",
         title=title,
@@ -152,6 +158,7 @@ def _normalize_entry(raw: dict) -> EpisodeRelease:
         air_at=parse_dt(pick(raw, "episodeDate")),
         confidence=TimeConfidence.UNKNOWN,  # set later
         total_episodes=(_as_int(pick(raw, "episodes")) or None),
+        media_type=media_type,
         length_min=_as_int(pick(raw, "lengthMin")),
         airing_status=pick(raw, "airingStatus", "status"),
         delayed_from=parse_dt(pick(raw, "delayedFrom")),

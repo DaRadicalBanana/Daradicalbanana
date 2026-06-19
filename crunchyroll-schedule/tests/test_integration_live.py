@@ -44,6 +44,7 @@ def _entry(route, ep, dt, platforms, air_type):
         "episodeDate": iso,
         "delayedFrom": "0001-01-01T00:00:00Z", "delayedUntil": "0001-01-01T00:00:00Z",
         "imageVersionRoute": f"anime/jpg/default/{route}.jpg",
+        "mediaTypes": [{"name": "TV", "route": "tv"}],
         "streams": [_stream(p) for p in platforms],
     }
 
@@ -144,11 +145,13 @@ def test_live_path_shows_have_last_and_next():
     assert both, "window aggregation should give last + next"
 
 
-def test_live_path_total_episodes():
+def test_live_path_total_episodes_and_media_type():
     _, res = _run()
     cr = next(s for s in res.shows if s.route == "cr-confirmed")
     ep = cr.next_scheduled or cr.last_released
     assert ep.total_episodes == 12  # from the entry's `episodes` field
+    assert ep.media_type == "TV"    # from mediaTypes[0].name
+    assert ep.length_min == 24
 
 
 def test_live_path_cover_from_image_route():

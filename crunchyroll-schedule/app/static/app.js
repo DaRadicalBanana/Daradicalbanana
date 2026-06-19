@@ -173,6 +173,11 @@ function wireImages(container) {
 function englishLine(ep) {
   return ep.english_title ? `<div class="english">${escapeHtml(ep.english_title)}</div>` : "";
 }
+// small meta line: "TV · 24m" (omits unknown bits)
+function metaBits(ep) {
+  const bits = [ep.media_type, ep.length_min ? `${ep.length_min}m` : ""].filter(Boolean);
+  return bits.length ? `<div class="sub">${escapeHtml(bits.join(" · "))}</div>` : "";
+}
 function favStar(route) {
   const f = isFav(route);
   return `<button class="fav ${f ? "on" : ""}" data-route="${escapeHtml(route)}"
@@ -196,6 +201,7 @@ function epCard(ep, tz) {
       ${englishLine(ep)}
       <div>${epLabel(ep)} · <span class="time">${fmtClock(ep.air_at, tz)}</span>
         <span class="rel">(${relative(ep.air_at)})</span></div>
+      ${metaBits(ep)}
       <div>${premiereBadge(ep)} ${delayBadge(ep)} ${badge(ep.confidence)} ${watchLink(ep)}</div>
     </div>
   </div>`;
