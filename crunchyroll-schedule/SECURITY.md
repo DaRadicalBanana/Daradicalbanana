@@ -41,11 +41,11 @@ documents the review and the hardening applied.
   native secret scanning applies to this public repo.
 
 ## Backlog for upcoming security runs
-- Tighten CSP `img-src` from `https:` to the specific image hosts.
 - Cap how far prev/next paging can go in the UI (defense in depth atop the
   server-side anchor clamp).
-- Consider a `Strict-Transport-Security` header (Render terminates TLS).
-- Add a CI secret-scanner action (e.g. gitleaks) for defense in depth.
+
+Done since: CSP `img-src` host allowlist, `Strict-Transport-Security`, and a
+gitleaks secret-scan CI job.
 
 ## Enabling debug safely
 `/api/debug` is off by default. To diagnose live data temporarily, set
