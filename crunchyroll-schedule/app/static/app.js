@@ -129,6 +129,11 @@ function badge(conf) {
   if (conf === "projected") return `<span class="badge proj">projection</span>`;
   return "";
 }
+function delayBadge(ep) {
+  return (ep.airing_status || "").toLowerCase() === "delayed"
+    ? `<span class="badge delayed" title="AnimeSchedule marks this episode delayed">delayed</span>`
+    : "";
+}
 function epNum(ep) {
   return ep.subtracted_episode_number
     ? `${ep.subtracted_episode_number}–${ep.episode_number}`
@@ -185,7 +190,7 @@ function epCard(ep, tz) {
       ${englishLine(ep)}
       <div>${epLabel(ep)} · <span class="time">${fmtClock(ep.air_at, tz)}</span>
         <span class="rel">(${relative(ep.air_at)})</span></div>
-      <div>${badge(ep.confidence)} ${watchLink(ep)}</div>
+      <div>${delayBadge(ep)} ${badge(ep.confidence)} ${watchLink(ep)}</div>
     </div>
   </div>`;
 }
@@ -234,7 +239,7 @@ function showRow(show, tz) {
   const next = show.next_scheduled
     ? `<div class="slot next"><span class="lbl">Next</span> ${epLabel(show.next_scheduled)} ·
         <span class="time">${fmtClock(show.next_scheduled.air_at, tz)}</span>
-        <span class="rel">(${relative(show.next_scheduled.air_at)})</span> ${badge(show.next_scheduled.confidence)}</div>`
+        <span class="rel">(${relative(show.next_scheduled.air_at)})</span> ${delayBadge(show.next_scheduled)} ${badge(show.next_scheduled.confidence)}</div>`
     : `<div class="slot muted">No upcoming episode this week</div>`;
   return `<div class="show">
     ${show.cover_image_url ? coverImg(show.cover_image_url, "") : `<div class="noart"></div>`}

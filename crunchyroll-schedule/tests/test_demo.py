@@ -52,6 +52,16 @@ def test_demo_flags_jp_fallback(tmp_path):
     assert confidences.get("aetherbound-chronicle") == TimeConfidence.CONFIRMED_SUB
 
 
+def test_demo_marks_delayed_show(tmp_path):
+    # hollow-crown-saga is configured as delayed in the demo fixtures.
+    svc = ScheduleService(_demo_settings(tmp_path))
+    iw = iso_week_of(2026, 7, 1)
+    res = asyncio.run(svc.weekly(iw.year, iw.week, "sub"))
+    eps = [e for eps in res.days.values() for e in eps]
+    hollow = next(e for e in eps if e.route == "hollow-crown-saga")
+    assert (hollow.airing_status or "").lower() == "delayed"
+
+
 def test_demo_multi_episode_drop(tmp_path):
     sub, _ = build_demo_timetables(2026, 27)
     mirror = next(e for e in sub if e["Route"] == "mirror-twins")

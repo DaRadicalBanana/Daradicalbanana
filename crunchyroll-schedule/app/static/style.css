@@ -110,6 +110,7 @@ h1 { font-size: 1.3rem; margin: 0 0 .5rem; }
 }
 .badge.jp { background: rgba(217,164,65,.15); color: var(--jp); border: 1px solid var(--jp); }
 .badge.proj { background: rgba(154,160,173,.15); color: var(--muted); border: 1px solid var(--muted); }
+.badge.delayed { background: rgba(233,100,91,.15); color: #e9645b; border: 1px solid #e9645b; }
 footer { padding: 1rem 1.5rem; color: var(--muted); font-size: .8rem; border-top: 1px solid #262a36; }
 footer .badge.jp { font-size: .65rem; }
 footer a { color: var(--accent); text-decoration: none; }
