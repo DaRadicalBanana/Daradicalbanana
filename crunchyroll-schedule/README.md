@@ -1,14 +1,25 @@
-# Crunchyroll Weekly Episode Schedule (personal)
+# Crunchyroll Episode Schedule (personal)
 
-A local web app that shows, as a weekly calendar, when each currently-airing
-Crunchyroll anime's **last episode released** and **next episode is scheduled**,
+A web app that shows when currently-airing Crunchyroll anime episodes release,
 in your local timezone (default `America/New_York`). It fills the gap that
 Crunchyroll's own app leaves: there's no clear "when did this drop / when's the
 next one."
 
-Scope for v1: currently-airing **Summer 2026** shows on Crunchyroll, weekly
-calendar, local-timezone times, personal/local use. No notifications, no
-history, no accounts.
+It opens to **today's releases** and offers:
+
+- **Daily / Weekly / Monthly** schedule, grouped by date (with a per-day count
+  and "Today" highlight); prev/next paging.
+- **Shows** view — each show's last-released and next-scheduled episode.
+- **Sub / Dub** toggle (separate Crunchyroll dub timing).
+- **Search** + **★ favorites** (filter both views; favorites scope the calendar
+  feed too).
+- Per-episode detail: **Ep N / total**, runtime + media type ("TV · 24m"),
+  cover art, and badges for **premiere**, **delayed**, and
+  **"JP broadcast time"** (when a true CR sub time is unconfirmed).
+- An **iCalendar feed** of the next ~4 weeks to subscribe in your phone calendar.
+- Always shows **data freshness**; future episodes are flagged as projections.
+
+Personal/local use (or a tiny personal deploy). No accounts, no history.
 
 ## Data sources (see `../RESEARCH_REPORT.md` for the decision record)
 
@@ -32,10 +43,10 @@ uvicorn app.main:app --reload
 # open http://127.0.0.1:8000
 ```
 
-With no `ANIMESCHEDULE_TOKEN` set, the app starts in **demo mode**: it renders a
-full weekly calendar from sample data (clearly banner-labelled "SAMPLE DATA"),
-exercising the real pipeline — CR filtering, sub→raw fallback flags, last/next,
-multi-episode drops, delays. Force it on/off with `APP_DEMO=1` / `APP_DEMO=0`.
+With no `ANIMESCHEDULE_TOKEN` set, the app starts in **demo mode**: it renders the
+schedule from sample data (clearly banner-labelled "SAMPLE DATA"), exercising the
+real pipeline — CR filtering, sub→raw fallback flags, last/next, multi-episode
+drops, delays. Force it on/off with `APP_DEMO=1` / `APP_DEMO=0`.
 
 ## Put it online (easiest for phone use)
 
@@ -67,12 +78,13 @@ icon (it ships a web manifest + iOS meta tags).
 
 ### Subscribe in your phone's calendar
 
-The app serves an iCalendar feed of each show's next episode at
+The app serves an iCalendar feed of the **next ~4 weeks** of upcoming episodes at
 **`/api/calendar.ics`**. Add it as a *subscribed* calendar (iOS: Calendar →
 Add Account → Other → Add Subscribed Calendar → use
-`http://<your-computer-ip>:8000/api/calendar.ics`) and upcoming episodes show up
-alongside your normal events. Projected/JP-fallback episodes are marked in the
-event title.
+`http://<your-computer-ip>:8000/api/calendar.ics`) and episodes show up alongside
+your normal events. Projected/JP-fallback episodes are marked in the event title.
+Append `?air_type=dub` for dub timing, or `?routes=slug1,slug2` to limit the feed
+to specific shows (the in-app Subscribe link auto-scopes to your favorites).
 
 ### Going live
 
@@ -106,11 +118,12 @@ week-numbering (including the year-boundary case).
 
 ## Status
 
-- Steps 1 (strategy + critique) and 3 (model + scaffold) are done; the app runs
-  end to end in demo mode with no token or network.
-- Step 2 (live verification): the live call is blocked in the sandbox (egress +
-  no token), so `scripts/verify_step2.py` is ready to run when those exist. From
-  the cited wrapper source I did resolve the casing question — the live API is
-  almost certainly **PascalCase** (see `DATA_MODEL.md`); fixtures match and the
-  parser handles both regardless.
+- Validated end-to-end on live Crunchyroll data (deployed on Render).
+- **Live API shape (confirmed):** fields are **lowerCamelCase** (`episodeDate`,
+  `episodeNumber`, `streams`, …) and `streams` is a **list** of
+  `{platform, name, url}` objects (URLs may lack a scheme). The parser is
+  casing-tolerant and `parsing.normalize_streams` handles the list shape; see
+  `DATA_MODEL.md` and `SECURITY.md`.
+- ~59 offline tests cover parsing, ISO weeks, the demo pipeline, the live-shape
+  integration path, ICS, throttling, and security headers.
 ```
