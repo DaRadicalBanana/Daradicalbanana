@@ -27,11 +27,20 @@ _service = ScheduleService(settings)
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
-# Content-Security-Policy: same-origin scripts/styles only (no inline JS), images
-# allowed over https (external cover art) + data:, no framing.
+# Content-Security-Policy: same-origin scripts/styles (no inline JS), no framing.
+# img-src is restricted to the specific cover-art hosts (kept in sync with the
+# configured AnimeSchedule image base) instead of a blanket https:.
+def _host(url: str) -> str:
+    from urllib.parse import urlparse
+
+    p = urlparse(url)
+    return f"{p.scheme}://{p.netloc}" if p.scheme and p.netloc else ""
+
+
+_IMG_HOSTS = " ".join(h for h in (_host(settings.img_base), "https://*.anilist.co") if h)
 _CSP = (
     "default-src 'self'; "
-    "img-src 'self' https: data:; "
+    f"img-src 'self' data: {_IMG_HOSTS}; "
     "style-src 'self'; "
     "script-src 'self'; "
     "connect-src 'self'; "
@@ -50,6 +59,8 @@ def _apply_security_headers(resp):
     resp.headers.setdefault("X-Frame-Options", "DENY")
     resp.headers.setdefault("Referrer-Policy", "no-referrer")
     resp.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+    # Render terminates TLS; tell browsers to stick to HTTPS.
+    resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
     return resp
 
 

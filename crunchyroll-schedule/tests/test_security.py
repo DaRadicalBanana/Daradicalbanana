@@ -28,6 +28,18 @@ def test_csp_blocks_inline_and_framing():
     assert "frame-ancestors 'none'" in csp
 
 
+def test_csp_img_src_is_restricted_to_hosts():
+    csp = c.get("/").headers["content-security-policy"]
+    assert "img-src 'self' data:" in csp
+    assert "img-src 'self' data: https:;" not in csp  # not a blanket https:
+    assert "anilist.co" in csp  # specific cover hosts listed
+
+
+def test_hsts_header_present():
+    h = c.get("/").headers
+    assert h.get("strict-transport-security", "").startswith("max-age=")
+
+
 def test_debug_endpoint_disabled_by_default():
     # APP_DEBUG is unset in tests -> /api/debug must not expose internals.
     assert c.get("/api/debug").status_code == 404
