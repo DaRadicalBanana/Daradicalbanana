@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.ics import build_ics  # noqa: E402
+from app.ics import build_ics, build_ics_events  # noqa: E402
 from app.models import EpisodeRelease, Show, TimeConfidence, WeeklySchedule  # noqa: E402
 
 FUTURE = datetime.now(timezone.utc) + timedelta(days=2)
@@ -65,3 +65,25 @@ def test_ics_routes_filter():
     ics = build_ics(sched, routes={"keep"})
     assert "SUMMARY:Keep" in ics
     assert "SUMMARY:Drop" not in ics
+
+
+def test_build_ics_events_from_release_list():
+    eps = [
+        _ep(),  # route "test-show", episode 6
+    ]
+    eps[0].title = "Cool Anime"
+    ics = build_ics_events(eps, calname="Crunchyroll Schedule (sub)")
+    assert ics.startswith("BEGIN:VCALENDAR")
+    assert "X-WR-CALNAME:Crunchyroll Schedule (sub)" in ics
+    assert "SUMMARY:Cool Anime — Ep 6" in ics
+    assert ics.count("BEGIN:VEVENT") == 1
+
+
+def test_build_ics_events_routes_filter_and_skip_no_time():
+    keep = _ep(); keep.route = "keep"; keep.title = "Keep"
+    drop = _ep(); drop.route = "drop"; drop.title = "Drop"
+    notime = _ep(); notime.route = "keep"; notime.title = "NoTime"; notime.air_at = None
+    ics = build_ics_events([keep, drop, notime], routes={"keep"})
+    assert "SUMMARY:Keep" in ics
+    assert "SUMMARY:Drop" not in ics      # filtered by routes
+    assert "SUMMARY:NoTime" not in ics    # skipped (no air_at)

@@ -101,3 +101,27 @@ def build_ics(
         lines += _event(ep, show.title, show.crunchyroll_url or (ep.streams or {}).get("crunchyroll"))
     lines.append("END:VCALENDAR")
     return "\r\n".join(lines) + "\r\n"
+
+
+def build_ics_events(releases, calname: str = "Crunchyroll Schedule", routes: set[str] | None = None) -> str:
+    """Build a feed from a flat list of EpisodeRelease (one VEVENT each).
+
+    Used for the multi-week upcoming feed; `routes` (if given) limits to those
+    show routes (e.g. favorites)."""
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        f"PRODID:{_PRODID}",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        _fold(f"X-WR-CALNAME:{_esc(calname)}"),
+        "X-WR-TIMEZONE:UTC",
+    ]
+    for ep in releases:
+        if routes is not None and ep.route not in routes:
+            continue
+        if not ep.air_at:
+            continue
+        lines += _event(ep, ep.title, (ep.streams or {}).get("crunchyroll"))
+    lines.append("END:VCALENDAR")
+    return "\r\n".join(lines) + "\r\n"

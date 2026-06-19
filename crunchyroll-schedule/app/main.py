@@ -16,7 +16,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
-from .ics import build_ics
+from .ics import build_ics_events
 from .isoweek import current_iso_week
 from .models import to_jsonable
 from .service import ScheduleService, _normalize_entry, _stream_census, is_crunchyroll
@@ -178,17 +178,17 @@ async def calendar_ics(
     routes: str | None = Query(default=None),
     air_type: str = Query(default="sub"),
 ) -> Response:
-    """iCalendar feed of each show's next episode — subscribe in your phone's
-    calendar (use the http(s) URL as a subscription/'webcal' feed).
+    """iCalendar feed of upcoming Crunchyroll episodes (next ~4 weeks) — subscribe
+    in your phone's calendar (use the http(s) URL as a subscription/'webcal' feed).
 
     Optional `routes` (comma-separated show routes) limits the feed, e.g. to your
     favorites. `air_type` selects sub or dub timing.
     """
-    iw = current_iso_week(settings.timezone)
-    data = await _service.weekly(iw.year, iw.week, air_type)
+    norm_air = "dub" if air_type == "dub" else "sub"
+    releases = await _service.upcoming_releases(28, norm_air)
     route_filter = {r for r in routes.split(",") if r} if routes else None
-    calname = f"Crunchyroll Schedule ({data.air_type})"
-    body = build_ics(data, calname=calname, routes=route_filter)
+    calname = f"Crunchyroll Schedule ({norm_air})"
+    body = build_ics_events(releases, calname=calname, routes=route_filter)
     return Response(
         content=body,
         media_type="text/calendar; charset=utf-8",

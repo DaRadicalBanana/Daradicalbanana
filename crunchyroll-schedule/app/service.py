@@ -294,6 +294,42 @@ class ScheduleService:
             view.freshness.append(Freshness(fetched_at=datetime.now(timezone.utc), source="animeschedule", stale=False))
         return view
 
+    async def upcoming_releases(self, days: int, air_type: str = "sub") -> list[EpisodeRelease]:
+        """Flat, chronological list of CR releases from now through `days` ahead
+        (for the calendar feed). Deduped; covers resolved."""
+        air_type = "dub" if air_type == "dub" else "sub"
+        days = max(1, min(days, PAGING_WINDOW_DAYS))
+        tz = self.settings.timezone
+        local = ZoneInfo(tz)
+        today = datetime.now(local).date()
+        end = today + timedelta(days=days)
+        now_utc = datetime.now(timezone.utc)
+        weeks = _weeks_for_bounds(today, end)
+        results = await asyncio.gather(
+            *(self._week_cr_entries(air_type, iw.year, iw.week) for iw in weeks),
+            return_exceptions=True,
+        )
+        seen: set = set()
+        out: list[EpisodeRelease] = []
+        for res in results:
+            if isinstance(res, Exception):
+                continue
+            entries, _ = res
+            for e in entries:
+                if not e.air_at or e.air_at < now_utc:
+                    continue  # upcoming only
+                if e.air_at.astimezone(local).date() > end:
+                    continue
+                key = (e.route, e.episode_number, e.air_at.isoformat())
+                if key in seen:
+                    continue
+                seen.add(key)
+                if e.image_route:
+                    e.cover_image_url = f"{self.settings.img_base}{e.image_route}"
+                out.append(e)
+        out.sort(key=lambda x: x.air_at)
+        return out
+
     async def weekly(self, year: int, week: int, air_type: str = "sub") -> WeeklySchedule:
         air_type = "dub" if air_type == "dub" else "sub"
         tz = self.settings.timezone
