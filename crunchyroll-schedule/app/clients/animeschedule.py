@@ -92,3 +92,9 @@ class AnimeScheduleClient:
         params = {"anilist-ids": ",".join(str(i) for i in anilist_ids), "streams": "crunchyroll"}
         key = f"as:anime:anilist:{','.join(map(str, sorted(anilist_ids)))}"
         return await self._get("/anime", params, cache_key=key, ttl=self.settings.seasonal_ttl)
+
+    async def anime_probe(self):
+        """Fetch a small /anime sample to inspect its response shape (debug only)."""
+        return await self._get(
+            "/anime", {"streams": "crunchyroll"}, cache_key="as:anime:probe", ttl=self.settings.seasonal_ttl
+        )

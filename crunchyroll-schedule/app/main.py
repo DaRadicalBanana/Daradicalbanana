@@ -170,6 +170,25 @@ async def debug(air_type: str = Query(default="sub")) -> JSONResponse:
         )
     except Exception as exc:  # surface the failure rather than 500
         out["error"] = f"{type(exc).__name__}: {exc}"
+
+    # /anime response shape (to design the AniList ID join without guessing)
+    try:
+        adata, _ = await _service.animeschedule.anime_probe()
+        out["anime_response_type"] = type(adata).__name__
+        if isinstance(adata, list):
+            out["anime_count"] = len(adata)
+            out["anime_sample"] = adata[0] if adata else None
+        elif isinstance(adata, dict):
+            out["anime_top_keys"] = sorted(adata.keys())
+            for k in ("anime", "page", "results", "data"):
+                v = adata.get(k)
+                if isinstance(v, list) and v:
+                    out["anime_list_key"] = k
+                    out["anime_sample"] = v[0]
+                    break
+    except Exception as exc:
+        out["anime_error"] = f"{type(exc).__name__}: {exc}"
+
     return JSONResponse(out)
 
 
