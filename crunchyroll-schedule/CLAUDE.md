@@ -48,8 +48,8 @@ strings (no integer fields). Join timetable↔anime by **`route`**.
   `parse_dt()` (maps `0001-01-01`/year≤1 → None), `normalize_streams()`
   (list|dict → `{platform: url}`, adds https), `detect_casing()`.
 - `clients/animeschedule.py` — async httpx; `timetable()`, `anime_by_anilist_ids()`,
-  `anime_probe()`; rate-limited, 429 backoff, file-cached, serve-stale. (Add
-  `anime_detail(route)` for the next task.)
+  `anime_probe()`, `anime_detail(route)`; rate-limited, 429 backoff, file-cached,
+  serve-stale.
 - `clients/anilist.py` — seasonal GraphQL (used by pre-season `_enrich_only`).
 - `service.py` — `ScheduleService`:
   - `weekly(year,week,air_type)` → `WeeklySchedule` (grid `days` = requested week;
@@ -59,8 +59,9 @@ strings (no integer fields). Join timetable↔anime by **`route`**.
     sets `has_prev/has_next`).
   - `upcoming_releases(days,air_type)` → flat list for the calendar feed.
   - `_classify_cr` (CR filter + sub/raw→`TimeConfidence`), `_build_shows`
-    (last/next + cover from imageVersionRoute), `_apply_anilist` (title-based —
-    TO BE REPLACED, see HANDOFF), `_enrich_only` (pre-season projections),
+    (last/next + cover from imageVersionRoute), `_apply_anime_details` (route-based
+    `/anime/{route}` join → AniList/MAL links+IDs, genres, studios; concurrent,
+    12s-budgeted, best-effort), `_enrich_only` (pre-season projections),
     `_stream_census` (debug).
 - `models.py` — normalized dataclasses: `EpisodeRelease` (route, title,
   english_title, episode_number, total_episodes, media_type, air_at, confidence,

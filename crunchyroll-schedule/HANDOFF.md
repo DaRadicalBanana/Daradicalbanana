@@ -26,51 +26,36 @@ task (with everything needed to do it), and the backlog.
   cache-busting, CSP+headers+HSTS, per-IP rate limiting, input clamping,
   dependency CVE scan, gitleaks. See `SECURITY.md`.
 
-## IN-FLIGHT NEXT TASK — AniList/MAL metadata enrichment (route-based join)
-Goal: replace the fragile **title-based** `_apply_anilist` with a reliable
-**route-based** join, and add "Open on AniList / MyAnimeList" links (+ genres/
-studios) to the Shows view. The `/anime` endpoint already carries the IDs, so
-**no AniList GraphQL call is needed** for this.
+## DONE — AniList/MAL metadata enrichment (route-based join)
+The fragile **title-based** `_apply_anilist` has been **replaced** by a
+**route-based** join. The Shows view now shows "AniList ↗ · MAL ↗" links and a
+genres line; `Show` carries `anilist_url/mal_url/anilist_id/mal_id/genres/studios`.
+No AniList GraphQL call is involved — the IDs come straight from AnimeSchedule's
+own `/anime/{route}` `websites` URL strings.
 
-Confirmed: `GET /api/v3/anime/{route}` → HTTP 200, a single dict containing
-`websites` (with `aniList`/`mal` URL strings), `genres`, `studios`, etc. (See
-CLAUDE.md "CONFIRMED live API shapes" and DATA_MODEL.md.)
+What landed:
+- **client** `AnimeScheduleClient.anime_detail(route)` (cached `seasonal_ttl`).
+- **models** `Show` gained `anilist_url`, `mal_url`, `genres`, `studios`.
+- **service** `_apply_anime_details(shows)` + `_merge_anime_detail(show, data)`:
+  per-show detail fetched **concurrently** (`asyncio.Semaphore(8)`), whole pass
+  wrapped in `asyncio.wait_for(12s)` (can't blow the 30s endpoint budget),
+  per-show failures swallowed (links absent, schedule still renders). Parses
+  `websites.aniList/mal` (scheme-fixed via `parsing._with_scheme`), pulls integer
+  IDs with `re.search(r"/anime/(\d+)", …)`, and `genres[:5]`/`studios[:3]`.
+  `weekly()` now calls `_apply_anime_details(result.shows)`. `_apply_anilist` is
+  removed; `_enrich_only` still uses `anilist.seasonal`/`crunchyroll_url`. Demo
+  path returns before enrichment, so it's unaffected.
+- **frontend** `showRow` adds a `.links` line (external, `rel="noopener"`,
+  escaped) and a genres `.sub` line; `.show .links` styled in `style.css`.
+- **tests** `tests/test_integration_live.py`: `_live_service` mocks
+  `anime_detail` → `({}, _meta())` by default; `test_live_path_anime_detail_enrichment`
+  overrides it and asserts the IDs/URLs/genres/studios land. **60 tests pass.**
 
-### Implementation plan (precise)
-1. **client** `AnimeScheduleClient.anime_detail(route)`:
-   `await self._get(f"/anime/{route}", {}, cache_key=f"as:anime:detail:{route}",
-   ttl=self.settings.seasonal_ttl)` → returns `(dict, meta)`.
-2. **models** `Show`: add `anilist_url`, `mal_url` (str|None), `genres`,
-   `studios` (list[str]).
-3. **service** `_apply_anime_details(shows)`:
-   - For each `show.route`, fetch `anime_detail` **concurrently** (bound with an
-     `asyncio.Semaphore(~8)`), the whole thing wrapped in `asyncio.wait_for(~12s)`
-     so it can never blow the endpoint's 30s budget; per-show failures are caught
-     and skipped (best-effort, graceful).
-   - Parse `data["websites"]`: `aniList`/`mal` → add `https://` scheme (reuse the
-     scheme logic) → set `show.anilist_url`/`show.mal_url`; extract integer id via
-     `re.search(r"/anime/(\d+)", url)` → `show.anilist_id`/`show.mal_id`.
-   - `data["genres"]`/`["studios"]` → `[x["name"] …][:5]`/`[:3]`.
-   - In `weekly()`, REPLACE `await self._apply_anilist(result, year)` with
-     `await self._apply_anime_details(result.shows)`; then remove the now-unused
-     `_apply_anilist` (keep `crunchyroll_url`/`anilist.seasonal` — still used by
-     `_enrich_only`). Demo path is unaffected (returns before enrichment).
-4. **frontend** `showRow`: add a links line ("AniList ↗ · MAL ↗", external,
-   `rel="noopener"`, escaped) and a genres `.sub` line.
-5. **tests** (`tests/test_integration_live.py`): the live harness `_live_service`
-   must mock `svc.animeschedule.anime_detail` to return `({}, _meta())` by default
-   (so existing live-path tests stay offline). Add one test overriding it with a
-   record containing `websites`/`genres`/`studios` and assert the show gets
-   `anilist_url`/`anilist_id`/`mal_url`/`mal_id`/`genres`.
+Follow-up worth considering: surface `studios` in the UI too (currently parsed
+and stored but only genres are rendered); add an `img-src` entry only if AniList
+cover art is ever reintroduced (this join no longer overrides covers).
 
-### Risk notes
-- Per-show calls are throttled (rate limiter, default 30/min). The Shows view can
-  have many shows → cold-cache enrichment could be slow; the `wait_for(12s)` +
-  cache (24h TTL) keep it safe and fast after warm-up. Failure = links absent,
-  schedule still renders.
-- A user already confirmed `/anime/{route}` returns 200 + `websites: True`.
-
-## Backlog (after the enrichment)
+## Backlog
 - Minor UX polish: URL-shareable view state (`?view&range&at`), keyboard shortcuts.
 - Optional: drop the title-based AniList path entirely once route-join covers it;
   keep AniList only for the pre-season `_enrich_only` premieres.

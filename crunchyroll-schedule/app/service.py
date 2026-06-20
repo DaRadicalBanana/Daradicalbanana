@@ -16,6 +16,7 @@ blocks egress to animeschedule.net. scripts/verify_step2.py exists to confirm it
 from __future__ import annotations
 
 import asyncio
+import re
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -33,7 +34,7 @@ from .models import (
     TimeConfidence,
     WeeklySchedule,
 )
-from .parsing import normalize_streams, parse_dt, pick
+from .parsing import _with_scheme, normalize_streams, parse_dt, pick
 from .ratelimit import RateLimiter
 
 # How many weeks around the requested week to scan when computing each show's
@@ -384,8 +385,10 @@ class ScheduleService:
             stale=not (sub_meta.fresh if sub_meta else False),
         )
 
-        # ---- AniList enrichment (cover art + projected premieres) ----
-        await self._apply_anilist(result, year)
+        # ---- metadata enrichment (AniList/MAL links, genres, studios) ----
+        # Route-based join via AnimeSchedule's own /anime/{route} records, which
+        # already carry the external IDs — no AniList GraphQL call needed.
+        await self._apply_anime_details(result.shows)
         return result
 
     @staticmethod
@@ -521,37 +524,60 @@ class ScheduleService:
         shows.sort(key=lambda s: s.title.lower())
         return shows
 
-    async def _apply_anilist(self, result: WeeklySchedule, year: int) -> None:
-        season = _season_for_year_context(year, result.iso_week)
-        try:
-            media = await self.anilist.seasonal(season, year)
-        except Exception as exc:
-            result.warnings.append(f"AniList enrichment unavailable: {exc}")
-            result.freshness.append(Freshness(None, "anilist", stale=True, note=str(exc)))
+    async def _apply_anime_details(self, shows: list[Show]) -> None:
+        """Enrich shows with AniList/MAL links, genres and studios via the
+        route-based `/anime/{route}` join.
+
+        Best-effort and strictly time-boxed: per-show detail fetches run
+        concurrently (bounded by a semaphore) and the whole pass is wrapped in a
+        12s budget so it can never blow the endpoint's 30s ceiling. Any per-show
+        failure is swallowed — the schedule still renders, just without links.
+        """
+        if not shows:
             return
-        result.freshness.append(
-            Freshness(fetched_at=datetime.now(timezone.utc), source="anilist", stale=False)
-        )
-        # Match by title (best-effort without the AnimeSchedule anilist-id join,
-        # which needs the network). The id-based join lives in
-        # AnimeScheduleClient.anime_by_anilist_ids and is wired in once egress
-        # to animeschedule.net is allowed.
-        by_title: dict[str, dict] = {}
-        for m in media:
-            for t in (m.get("title") or {}).values():
-                if t:
-                    by_title[t.lower()] = m
-        for show in result.shows:
-            m = by_title.get(show.title.lower())
-            if not m:
-                continue
-            show.anilist_id = m.get("id")
-            show.mal_id = m.get("idMal")
-            cover = m.get("coverImage") or {}
-            # Prefer AniList art when available, but keep the AnimeSchedule cover
-            # as a fallback rather than blanking it.
-            show.cover_image_url = cover.get("large") or cover.get("medium") or show.cover_image_url
-            show.crunchyroll_url = show.crunchyroll_url or crunchyroll_url(m)
+        sem = asyncio.Semaphore(8)
+
+        async def enrich(show: Show) -> None:
+            if not show.route:
+                return
+            async with sem:
+                try:
+                    data, _ = await self.animeschedule.anime_detail(show.route)
+                except Exception:
+                    return  # graceful: links absent, schedule unaffected
+            if not isinstance(data, dict):
+                return
+            self._merge_anime_detail(show, data)
+
+        try:
+            await asyncio.wait_for(
+                asyncio.gather(*(enrich(s) for s in shows), return_exceptions=True),
+                timeout=12,
+            )
+        except asyncio.TimeoutError:
+            pass  # partial enrichment is fine; never block the response
+
+    @staticmethod
+    def _merge_anime_detail(show: Show, data: dict) -> None:
+        websites = data.get("websites") if isinstance(data.get("websites"), dict) else {}
+        anilist_raw = websites.get("aniList") or websites.get("anilist")
+        mal_raw = websites.get("mal")
+        if anilist_raw:
+            show.anilist_url = _with_scheme(str(anilist_raw))
+            m = re.search(r"/anime/(\d+)", show.anilist_url)
+            if m:
+                show.anilist_id = int(m.group(1))
+        if mal_raw:
+            show.mal_url = _with_scheme(str(mal_raw))
+            m = re.search(r"/anime/(\d+)", show.mal_url)
+            if m:
+                show.mal_id = int(m.group(1))
+        genres = data.get("genres")
+        if isinstance(genres, list):
+            show.genres = [g["name"] for g in genres if isinstance(g, dict) and g.get("name")][:5]
+        studios = data.get("studios")
+        if isinstance(studios, list):
+            show.studios = [s["name"] for s in studios if isinstance(s, dict) and s.get("name")][:3]
 
     async def _enrich_only(self, result: WeeklySchedule, year: int) -> WeeklySchedule:
         """Pre-season / AnimeSchedule-down path: show projected premieres from

@@ -260,9 +260,23 @@ function showRow(show, tz) {
     ${show.cover_image_url ? coverImg(show.cover_image_url, "") : `<div class="noart"></div>`}
     <div class="info">
       <div class="title">${star} ${escapeHtml(show.title)} ${watchLink(show.next_scheduled || show.last_released || {})}</div>
-      ${eng}${last}${next}
+      ${eng}${last}${next}${genresLine(show)}${metaLinks(show)}
     </div>
   </div>`;
+}
+
+// external "Open on …" links from the route-based /anime metadata join
+function extLink(url, label) {
+  return url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${label} ↗</a>` : "";
+}
+function metaLinks(show) {
+  const links = [extLink(show.anilist_url, "AniList"), extLink(show.mal_url, "MAL")].filter(Boolean);
+  return links.length ? `<div class="links">${links.join(" · ")}</div>` : "";
+}
+function genresLine(show) {
+  return show.genres && show.genres.length
+    ? `<div class="sub">${escapeHtml(show.genres.join(" · "))}</div>`
+    : "";
 }
 
 function renderShows(data) {

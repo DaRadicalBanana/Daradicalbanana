@@ -92,8 +92,12 @@ def _live_service() -> ScheduleService:
     async def fake_seasonal(season, year):
         return []  # skip AniList enrichment
 
+    async def fake_anime_detail(route):
+        return {}, _meta()  # no metadata by default; keeps live-path tests offline
+
     svc.animeschedule.timetable = fake_timetable
     svc.anilist.seasonal = fake_seasonal
+    svc.animeschedule.anime_detail = fake_anime_detail
     return svc
 
 
@@ -192,6 +196,35 @@ def test_schedule_view_tolerates_failing_week():
     # Failure on some weeks is surfaced but the view still returns.
     assert any("unavailable" in w for w in res.warnings)
     assert isinstance(res.groups, list)
+
+
+def test_live_path_anime_detail_enrichment():
+    """Route-based /anime/{route} join adds AniList/MAL links + IDs + genres."""
+    svc = _live_service()
+
+    async def detail(route):
+        return (
+            {
+                "websites": {
+                    "aniList": "anilist.co/anime/12345/Some-Show",
+                    "mal": "myanimelist.net/anime/67890/Some_Show",
+                },
+                "genres": [{"name": "Action"}, {"name": "Comedy"}],
+                "studios": [{"name": "Studio X"}],
+            },
+            _meta(),
+        )
+
+    svc.animeschedule.anime_detail = detail
+    cw = current_iso_week(TZ)
+    res = asyncio.run(svc.weekly(cw.year, cw.week, "sub"))
+    cr = next(s for s in res.shows if s.route == "cr-confirmed")
+    assert cr.anilist_url == "https://anilist.co/anime/12345/Some-Show"
+    assert cr.anilist_id == 12345
+    assert cr.mal_url == "https://myanimelist.net/anime/67890/Some_Show"
+    assert cr.mal_id == 67890
+    assert cr.genres == ["Action", "Comedy"]
+    assert cr.studios == ["Studio X"]
 
 
 def test_live_path_ics_feed():

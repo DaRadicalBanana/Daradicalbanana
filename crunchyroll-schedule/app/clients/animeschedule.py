@@ -98,3 +98,14 @@ class AnimeScheduleClient:
         return await self._get(
             "/anime", {"streams": "crunchyroll"}, cache_key="as:anime:probe", ttl=self.settings.seasonal_ttl
         )
+
+    async def anime_detail(self, route: str):
+        """Fetch a single show's metadata record (`GET /anime/{route}`).
+
+        Returns the show detail dict (with `websites`, `genres`, `studios`, etc.),
+        which carries the AniList/MAL IDs embedded in `websites` URL strings — so
+        the metadata join needs no AniList GraphQL call. Cached for `seasonal_ttl`.
+        """
+        return await self._get(
+            f"/anime/{route}", {}, cache_key=f"as:anime:detail:{route}", ttl=self.settings.seasonal_ttl
+        )

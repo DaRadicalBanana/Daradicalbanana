@@ -54,6 +54,10 @@ class Show:
     english_title: str | None = None
     anilist_id: int | None = None
     mal_id: int | None = None
+    anilist_url: str | None = None
+    mal_url: str | None = None
+    genres: list[str] = field(default_factory=list)
+    studios: list[str] = field(default_factory=list)
     cover_image_url: str | None = None
     crunchyroll_url: str | None = None
     # Last episode that has already released (<= now) and next scheduled (> now).
